@@ -5,7 +5,9 @@
 Microsoft Word, basically — but every document saves as clean **Markdown** (`.md`).
 It's a single HTML file. No install, no build step, no internet connection required.
 
-![It's a Word-style editor that reads and writes Markdown.](docs/screenshot.png)
+A faithful Microsoft Word look — blue title bar, ribbon tabs (Home / Insert /
+View…), grouped toolbars, ruler, and a blue status bar with a zoom slider —
+wrapped around an editor whose only file format is Markdown.
 
 ## Features
 
