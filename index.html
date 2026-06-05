@@ -313,7 +313,7 @@
     <span class="si" id="charStat">0 characters</span>
     <span class="si">English (United States)</span>
     <span class="si" id="saveStat">Autosaved</span>
-    <span class="si" id="buildTag" style="opacity:.6">build 7</span>
+    <span class="si" id="buildTag" style="opacity:.6">build 8</span>
     <span class="spacer"></span>
     <button class="vbtn" title="Read Mode">📖</button>
     <button class="vbtn" title="Print Layout">📄</button>
@@ -732,13 +732,25 @@
   }
   function listToMd(listEl,out,indent,ordered){
     let i=1;const isTask=listEl.classList.contains('task');
-    listEl.querySelectorAll(':scope > li').forEach(li=>{
-      const nested=[];let inlineHtml='';
-      li.childNodes.forEach(c=>{if(c.nodeType===1&&/^(ul|ol)$/i.test(c.tagName))nested.push(c);else inlineHtml+=c.nodeType===1?c.outerHTML:(c.textContent||'');});
-      let txt=inlineFromHtml(inlineHtml).trim();let marker=ordered?(i+'. '):'- ';
-      if(isTask||/^[☐☑✓]\s/.test(txt)){const checked=/^[☑✓]/.test(txt);txt=txt.replace(/^[☐☑✓]\s*/,'');marker='- ['+(checked?'x':' ')+'] ';}
-      out.push(indent+marker+txt);
-      nested.forEach(n=>listToMd(n,out,indent+'  ',n.tagName.toLowerCase()==='ol'));i++;
+    // Walk direct children IN ORDER. Browsers nest sub-bullets two different ways:
+    //   1) a <ul>/<ol> INSIDE the <li>           (standard)
+    //   2) a <ul>/<ol> as a SIBLING of the <li>  (Chrome's Tab-indent output)
+    // Handle both, plus arbitrary <ul><ul> wrapping, so no sub-bullets are lost.
+    listEl.childNodes.forEach(node=>{
+      if(node.nodeType!==1)return;
+      const tag=node.tagName.toLowerCase();
+      if(tag==='li'){
+        const nested=[];let inlineHtml='';
+        node.childNodes.forEach(c=>{if(c.nodeType===1&&/^(ul|ol)$/i.test(c.tagName))nested.push(c);else inlineHtml+=c.nodeType===1?c.outerHTML:(c.textContent||'');});
+        let txt=inlineFromHtml(inlineHtml).trim();let marker=ordered?(i+'. '):'- ';
+        if(isTask||/^[☐☑✓]\s/.test(txt)){const checked=/^[☑✓]/.test(txt);txt=txt.replace(/^[☐☑✓]\s*/,'');marker='- ['+(checked?'x':' ')+'] ';}
+        out.push(indent+marker+txt);
+        nested.forEach(n=>listToMd(n,out,indent+'  ',n.tagName.toLowerCase()==='ol'));
+        i++;
+      }else if(tag==='ul'||tag==='ol'){
+        // stray nested list -> one indent level deeper than this list
+        listToMd(node,out,indent+'  ',tag==='ol');
+      }
     });
   }
   function tableToMd(table,out,indent){
