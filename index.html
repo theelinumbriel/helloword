@@ -44,6 +44,7 @@
     border-radius:3px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
   }
   .qat button:hover{background:rgba(255,255,255,.18)}
+  .qat button svg{width:16px;height:16px;display:block}
   .title-center{flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
   .title-center .docttl{
     color:#fff;background:transparent;border:1px solid transparent;border-radius:3px;
@@ -71,7 +72,7 @@
   /* ============ RIBBON BODY ============ */
   .ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--ribbon-border);height:94px;display:flex;align-items:stretch;padding:4px 4px 0;overflow-x:auto;overflow-y:hidden}
   .ribbon-panel{display:none;align-items:stretch;height:100%}
-  .ribbon-panel.active{display:flex}
+  .ribbon-panel.active{display:flex;flex:1;justify-content:center}
   .rgroup{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 20px 2px;position:relative;min-height:100%}
   .rgroup:after{content:"";position:absolute;right:0;top:6px;bottom:18px;width:1px;background:var(--ribbon-border)}
   .rgroup:last-child:after{display:none}
@@ -119,8 +120,19 @@
   .page h2{font-size:13pt;font-weight:600;color:#2e74b5;margin:8pt 0 4pt}
   .page h3{font-size:12pt;font-weight:600;color:#1f4d78;margin:8pt 0 4pt}
   .page h4{font-size:11pt;font-weight:600;font-style:italic;color:#2e74b5;margin:8pt 0 4pt}
-  .page ul,.page ol{margin:0 0 8pt;padding-left:.5in}
+  .page ul,.page ol{margin:0 0 8pt;padding-left:.4in}
   .page li{margin:2pt 0}
+  .page li>ul,.page li>ol{margin:2pt 0 2pt;padding-left:.3in}
+  /* Word-style level-based markers */
+  .page ul{list-style-type:disc}
+  .page ul ul{list-style-type:circle}
+  .page ul ul ul{list-style-type:square}
+  .page ul ul ul ul{list-style-type:disc}
+  .page ol{list-style-type:decimal}
+  .page ol ol{list-style-type:lower-alpha}
+  .page ol ol ol{list-style-type:lower-roman}
+  .page ol ol ol ol{list-style-type:decimal}
+  .page li::marker{color:#444}
   .page blockquote{margin:0 0 8pt;padding:2pt 14pt;border-left:3px solid #2e74b5;color:#444}
   .page pre{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;font-family:Consolas,"SF Mono",Menlo,monospace;font-size:10pt;margin:0 0 8pt;overflow:auto}
   .page code{font-family:Consolas,"SF Mono",Menlo,monospace;font-size:.92em;background:#f0f0f3;border-radius:3px;padding:.05em .3em}
@@ -131,7 +143,8 @@
   .page table{border-collapse:collapse;margin:0 0 8pt;width:100%}
   .page th,.page td{border:1px solid #999;padding:4px 8px;text-align:left}
   .page th{background:#f0f4fa}
-  .page ul.task li{list-style:none;margin-left:-.3in}
+  .page ul.task,.page ul.task ul{list-style:none}
+  .page ul.task>li{list-style:none;margin-left:-.25in}
 
   /* ============ STATUS BAR ============ */
   .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
@@ -159,8 +172,8 @@
     <div class="qat">
       <span class="wlogo">W</span>
       <button id="qSave" title="Save (Ctrl+S)">💾</button>
-      <button id="qUndo" title="Undo (Ctrl+Z)">↶</button>
-      <button id="qRedo" title="Redo (Ctrl+Y)">↷</button>
+      <button id="qUndo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10h-3"/><path d="M7.5 5.5 4 9l3.5 3.5"/></svg></button>
+      <button id="qRedo" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9H9a5 5 0 0 0 0 10h3"/><path d="M16.5 5.5 20 9l-3.5 3.5"/></svg></button>
     </div>
     <div class="title-center">
       <span class="docttl" id="docName" contenteditable="true" spellcheck="false">Document1</span>
@@ -204,7 +217,7 @@
             <button class="sm" data-cmd="format-painter" title="Format Painter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4" y="3" width="14" height="5.4" rx="1"/><path d="M14 8.4v2.1a1.6 1.6 0 0 1-1.6 1.6H9.2A1.7 1.7 0 0 0 7.5 13.8v1.7"/><rect x="5.7" y="15.5" width="3.6" height="5.5" rx="1"/></svg></button>
           </div>
         </div>
-        <div class="rgroup-label">Clipboard</div>
+        <div class="rgroup-label"></div>
       </div>
 
       <!-- Font -->
@@ -504,6 +517,76 @@
     }
   }
   editor.addEventListener('focus',()=>{if(!editor.textContent.trim())ensureBlock();});
+
+  /* ============================================================
+     LIST ECOSYSTEM — Word-style bullets & numbering
+     • Tab / Shift+Tab  -> demote / promote (nest / un-nest)
+     • Enter on an empty item -> outdent one level, or exit the list
+     • Backspace at the start of an empty item -> exit the list
+     ============================================================ */
+  function liOf(node){
+    let n=node||window.getSelection().anchorNode;if(!n)return null;
+    let el=n.nodeType===3?n.parentElement:n;
+    while(el&&el!==editor){if(el.tagName==='LI')return el;el=el.parentElement;}
+    return null;
+  }
+  function listDepth(li){let d=0,el=li;while(el&&el!==editor){if(el.tagName==='UL'||el.tagName==='OL')d++;el=el.parentElement;}return d;}
+  function liIsEmpty(li){
+    let t='';
+    li.childNodes.forEach(c=>{if(!(c.nodeType===1&&(c.tagName==='UL'||c.tagName==='OL')))t+=c.textContent;});
+    return t.replace(/[☐☑✓ ]/g,'').trim()==='';
+  }
+  function caretAtStart(li){
+    const s=window.getSelection();if(!s.rangeCount)return false;
+    const r=s.getRangeAt(0).cloneRange();r.selectNodeContents(li);
+    r.setEnd(s.getRangeAt(0).startContainer,s.getRangeAt(0).startOffset);
+    return r.toString().replace(/[☐☑✓ ]/g,'').trim()==='';
+  }
+  function exitList(li){
+    let list=li.closest('ul,ol');
+    let top=list;
+    while(top.parentElement&&top.parentElement.closest&&top.parentElement.closest('ul,ol'))
+      top=top.parentElement.closest('ul,ol');
+    li.remove();
+    const p=document.createElement('p');p.innerHTML='<br>';
+    top.parentNode.insertBefore(p,top.nextSibling);
+    if(list&&!list.querySelector('li'))list.remove();
+    const r=document.createRange();r.selectNodeContents(p);r.collapse(true);
+    const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+  }
+  editor.addEventListener('keydown',e=>{
+    const li=liOf();
+    // TAB: nest / un-nest inside lists; tab character elsewhere
+    if(e.key==='Tab'){
+      e.preventDefault();
+      if(li){
+        document.execCommand(e.shiftKey?'outdent':'indent');
+        retagTaskLists();
+      }else{
+        document.execCommand('insertText',false,'\t');
+      }
+      sync();return;
+    }
+    // ENTER on an empty list item: step out a level, or leave the list
+    if(e.key==='Enter'&&!e.shiftKey&&li&&liIsEmpty(li)){
+      e.preventDefault();
+      if(listDepth(li)>1)document.execCommand('outdent');
+      else exitList(li);
+      sync();return;
+    }
+    // BACKSPACE at the very start of an empty top-level item: leave the list
+    if(e.key==='Backspace'&&li&&liIsEmpty(li)&&caretAtStart(li)&&listDepth(li)===1){
+      e.preventDefault();exitList(li);sync();return;
+    }
+  });
+  // Keep the .task class (and ☐ prefix) on sublists created by indenting
+  function retagTaskLists(){
+    editor.querySelectorAll('ul.task ul:not(.task)').forEach(ul=>ul.classList.add('task'));
+    editor.querySelectorAll('ul.task li').forEach(li=>{
+      const f=li.firstChild;
+      if(f&&f.nodeType===3&&!/^\s*[☐☑✓]/.test(f.textContent))f.textContent='☐ '+f.textContent;
+    });
+  }
 
   /* ACTIVE STATE + COUNTS */
   function updateActive(){
