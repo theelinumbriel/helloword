@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Document1 - Word</title>
+<title>Document1 - helloword</title>
 <style>
   :root{
     --word-blue:#2b579a;
@@ -168,7 +168,7 @@
     </div>
     <div class="title-center">
       <span class="docttl" id="docName" contenteditable="true" spellcheck="false">Document1</span>
-      <span class="sub">— Word</span>
+      <span class="sub">— helloword</span>
     </div>
     <div class="win-controls">
       <button title="Minimize">&#8211;</button>
@@ -491,11 +491,11 @@
     },400);
   }
   editor.addEventListener('input',sync);
-  docName.addEventListener('input',()=>{document.title=(docName.textContent.trim()||'Document1')+' - Word';sync();});
+  docName.addEventListener('input',()=>{document.title=(docName.textContent.trim()||'Document1')+' - helloword';sync();});
   docName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();editor.focus();}});
   function restore(){
     try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;}}catch(_){}
-    document.title=(docName.textContent.trim()||'Document1')+' - Word';updateCounts();
+    document.title=(docName.textContent.trim()||'Document1')+' - helloword';updateCounts();
   }
   function newDoc(){
     if(editor.innerText.trim()&&!confirm('Start a new document? Unsaved changes will be cleared.'))return;
@@ -506,7 +506,7 @@
   fileInput.addEventListener('change',e=>{
     const file=e.target.files[0];if(!file)return;
     const r=new FileReader();
-    r.onload=ev=>{editor.innerHTML=mdToHtml(ev.target.result);docName.textContent=file.name.replace(/\.(md|markdown|txt)$/i,'')||'Document1';document.title=docName.textContent+' - Word';editor.focus();sync();};
+    r.onload=ev=>{editor.innerHTML=mdToHtml(ev.target.result);docName.textContent=file.name.replace(/\.(md|markdown|txt)$/i,'')||'Document1';document.title=docName.textContent+' - helloword';editor.focus();sync();};
     r.readAsText(file);fileInput.value='';
   });
 
