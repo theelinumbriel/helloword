@@ -40,7 +40,10 @@ open index.html       # macOS
 ### Option 2 — run it as its own app window (no browser chrome)
 
 Open helloword in a standalone, chromeless window — no tabs, no address bar,
-its own Dock/taskbar icon. Requires a Chromium browser (Chrome, Edge, or Brave).
+its own Dock/taskbar icon. Requires a Chromium browser (Chrome, Edge, or Brave)
+and Python 3 (the launcher serves the app on `http://localhost:8137` so it works
+even from protected folders like the Desktop, where `file://` access is blocked
+by macOS privacy protection).
 
 **macOS** — double-click **`helloword.app`**, or:
 
