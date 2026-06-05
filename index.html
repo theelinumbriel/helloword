@@ -330,7 +330,8 @@
     <button data-cmd="new"><span class="ic">🗎</span> New</button>
     <button data-cmd="open"><span class="ic">📂</span> Open… <span style="opacity:.5;margin-left:auto">.md</span></button>
     <hr>
-    <button data-cmd="save"><span class="ic">💾</span> Save as Markdown <span style="opacity:.5;margin-left:auto">Ctrl+S</span></button>
+    <button data-cmd="save"><span class="ic">💾</span> Save <span style="opacity:.5;margin-left:auto">Ctrl+S</span></button>
+    <button data-cmd="saveas"><span class="ic">🗂️</span> Save As… <span style="opacity:.5;margin-left:auto">Ctrl+⇧+S</span></button>
     <button data-cmd="exporthtml"><span class="ic">🌐</span> Export as HTML</button>
     <button data-cmd="print"><span class="ic">🖨️</span> Print</button>
   </div>
@@ -346,6 +347,8 @@
   const saveStat=document.getElementById('saveStat');
   const fileMenu=document.getElementById('fileMenu');
   const STORAGE='wordlike.doc.v2';
+  let fileHandle=null;            // the .md file we're editing (File System Access API)
+  const HAS_FS=!!window.showSaveFilePicker;   // Chrome/Edge on http(s)/localhost
   try{document.execCommand('styleWithCSS',false,true);}catch(_){}
 
   /* TAB SWITCHING */
@@ -403,8 +406,9 @@
     editor.focus();
     switch(cmd){
       case 'new': newDoc(); break;
-      case 'open': fileInput.click(); break;
-      case 'save': saveMarkdown(); break;
+      case 'open': openFile(); break;
+      case 'save': saveMarkdown(false); break;
+      case 'saveas': saveMarkdown(true); break;
       case 'exporthtml': exportHtml(); break;
       case 'print': window.print(); break;
       case 'paste': navigatorPaste(); break;
@@ -464,7 +468,7 @@
       applyStyle(e.key==='0'?'p':'h'+e.key);
       return;
     }
-    if(k==='s'){e.preventDefault();saveMarkdown();}
+    if(k==='s'){e.preventDefault();saveMarkdown(e.shiftKey);}
     else if(k==='k'){e.preventDefault();handleCmd('link');}
     else if(['b','i','u'].includes(k)){setTimeout(updateActive,0);}
   });
@@ -619,23 +623,73 @@
   }
   function newDoc(){
     if(editor.innerText.trim()&&!confirm('Start a new document? Unsaved changes will be cleared.'))return;
+    fileHandle=null;
     editor.innerHTML='<p><br></p>';docName.textContent='Document1';editor.focus();ensureBlock();sync();
   }
 
-  /* OPEN */
+  /* OPEN — use the file picker so we keep a handle and can overwrite it later */
+  async function openFile(){
+    if(HAS_FS){
+      try{
+        const [h]=await window.showOpenFilePicker({
+          types:[{description:'Markdown',accept:{'text/markdown':['.md','.markdown'],'text/plain':['.txt']}}]
+        });
+        fileHandle=h;
+        const file=await h.getFile();
+        loadText(await file.text(), file.name);
+      }catch(err){ if(err&&err.name!=='AbortError') console.error(err); }
+      return;
+    }
+    fileInput.click();   // fallback for browsers without the File System Access API
+  }
   fileInput.addEventListener('change',e=>{
     const file=e.target.files[0];if(!file)return;
+    fileHandle=null;     // a re-uploaded file can't be overwritten in place
     const r=new FileReader();
-    r.onload=ev=>{editor.innerHTML=mdToHtml(ev.target.result);docName.textContent=file.name.replace(/\.(md|markdown|txt)$/i,'')||'Document1';document.title=docName.textContent+' - helloword';editor.focus();sync();};
+    r.onload=ev=>loadText(ev.target.result,file.name);
     r.readAsText(file);fileInput.value='';
   });
+  function loadText(text,fileName){
+    editor.innerHTML=mdToHtml(text);
+    docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
+    document.title=docName.textContent+' - helloword';
+    editor.focus();ensureBlock();sync();
+  }
 
-  /* SAVE */
-  function saveMarkdown(){
+  /* Date/time helpers — YYYYMMDD + HHMMSS + tz offset (filename-safe) */
+  const pad2=n=>String(n).padStart(2,'0');
+  function tzOffset(d){const o=-d.getTimezoneOffset(),s=o>=0?'+':'-',a=Math.abs(o);return s+pad2(Math.floor(a/60))+pad2(a%60);}
+  function stampPrefix(d){return ''+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+' '+pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds())+' '+tzOffset(d);}
+  // strip any existing "YYYYMMDD[ HHMMSS ±HHMM]" prefix so it doesn't stack on re-save
+  function cleanTitle(s){return (s||'').replace(/^\d{8}(\s+\d{6}\s+[+-]\d{4})?\s+/,'').replace(/\.md$/i,'').trim()||'Document1';}
+  function stampedName(){return stampPrefix(new Date())+' '+cleanTitle(docName.textContent).replace(/[\/\\:*?"<>|]/g,'-')+'.md';}
+
+  /* SAVE — overwrites the SAME file every time (no Downloads duplicates) */
+  async function saveMarkdown(forceNew){
     const md=htmlToMd(editor);
-    const name=(docName.textContent.trim()||'Document1').replace(/[\/\\:*?"<>|]/g,'-');
-    const fn=name.endsWith('.md')?name:name+'.md';
-    download(fn,md,'text/markdown');saveStat.textContent='Saved '+fn+' ✓';
+    const fn=stampedName();
+    if(HAS_FS){
+      try{
+        if(forceNew||!fileHandle){
+          fileHandle=await window.showSaveFilePicker({
+            suggestedName:fn,
+            types:[{description:'Markdown',accept:{'text/markdown':['.md']}}]
+          });
+        }
+        const w=await fileHandle.createWritable();
+        await w.write(md);await w.close();
+        const nm=fileHandle.name||fn;
+        docName.textContent=nm.replace(/\.md$/i,'');
+        document.title=docName.textContent+' - helloword';
+        saveStat.textContent='Saved '+nm+' ✓';
+        return;
+      }catch(err){
+        if(err&&err.name==='AbortError')return;   // user cancelled the dialog
+        console.error(err);                        // otherwise fall back to download
+      }
+    }
+    download(fn,md,'text/markdown');
+    saveStat.textContent='Saved '+fn+' (Downloads) ✓';
   }
   function exportHtml(){
     const name=(docName.textContent.trim()||'Document1').replace(/[\/\\:*?"<>|]/g,'-');
