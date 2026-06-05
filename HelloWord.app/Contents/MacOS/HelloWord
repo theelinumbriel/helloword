@@ -2,7 +2,7 @@
 # Resolve the folder that contains this .app bundle
 BUNDLE="$(cd "$(dirname "$0")/../../.." && pwd)"
 DOC="$BUNDLE/index.html"
-PROFILE="$HOME/Library/Application Support/HelloWord"
+PROFILE="$HOME/Library/Application Support/helloword"
 mkdir -p "$PROFILE"
 
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

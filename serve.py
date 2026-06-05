@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tiny zero-dependency static server for HelloWord.
+"""Tiny zero-dependency static server for helloword.
 
 Run:  python3 serve.py
 Then open http://localhost:8000 in your browser.
@@ -25,7 +25,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         url = f"http://localhost:{PORT}"
-        print(f"HelloWord is running at {url}")
+        print(f"helloword is running at {url}")
         print("Press Ctrl+C to stop.")
         try:
             webbrowser.open(url)

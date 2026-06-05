@@ -1,4 +1,4 @@
-# HelloWord — a Markdown word processor
+# helloword — a Markdown word processor
 
 > *Hello, World → Hello, Word.* 👋
 
@@ -39,16 +39,16 @@ open index.html       # macOS
 
 ### Option 2 — run it as its own app window (no browser chrome)
 
-Open HelloWord in a standalone, chromeless window — no tabs, no address bar,
+Open helloword in a standalone, chromeless window — no tabs, no address bar,
 its own Dock/taskbar icon. Requires a Chromium browser (Chrome, Edge, or Brave).
 
-**macOS** — double-click **`HelloWord.app`**, or:
+**macOS** — double-click **`helloword.app`**, or:
 
 ```bash
 ./launch.command
 ```
 
-(First launch: right-click `HelloWord.app` → **Open** → **Open** to get past
+(First launch: right-click `helloword.app` → **Open** → **Open** to get past
 Gatekeeper, since the bundle isn't code-signed.)
 
 **Windows** — create a shortcut with this target (adjust the path):

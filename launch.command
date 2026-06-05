@@ -1,8 +1,8 @@
 #!/bin/bash
-# Double-click to open HelloWord in its own app window (macOS).
+# Double-click to open helloword in its own app window (macOS).
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DOC="$DIR/index.html"
-PROFILE="$HOME/Library/Application Support/HelloWord"
+PROFILE="$HOME/Library/Application Support/helloword"
 mkdir -p "$PROFILE"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 [ -x "$CHROME" ] || CHROME="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
