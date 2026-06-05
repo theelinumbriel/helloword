@@ -72,13 +72,13 @@
   .ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--ribbon-border);height:94px;display:flex;align-items:stretch;padding:4px 4px 0;overflow-x:auto;overflow-y:hidden}
   .ribbon-panel{display:none;align-items:stretch;height:100%}
   .ribbon-panel.active{display:flex}
-  .rgroup{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:3px 6px 2px;position:relative;min-height:100%}
+  .rgroup{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 20px 2px;position:relative;min-height:100%}
   .rgroup:after{content:"";position:absolute;right:0;top:6px;bottom:18px;width:1px;background:var(--ribbon-border)}
   .rgroup:last-child:after{display:none}
-  .rgroup-body{display:flex;align-items:center;gap:2px;flex:1}
+  .rgroup-body{display:flex;align-items:center;gap:8px;flex:1}
   .rgroup-label{font-size:11px;color:#666;text-align:center;padding-bottom:2px}
-  .rcol{display:flex;flex-direction:column;gap:1px;justify-content:center}
-  .rrow{display:flex;align-items:center;gap:1px}
+  .rcol{display:flex;flex-direction:column;gap:3px;justify-content:center}
+  .rrow{display:flex;align-items:center;gap:3px}
 
   button.big{background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 8px;min-width:54px;height:100%;color:#444;font-size:12px;font-family:var(--ui-font)}
   button.big .ic{font-size:22px;line-height:1}
@@ -89,21 +89,18 @@
   button.sm:hover{background:#dcdbda;border-color:#c7c6c5}
   button.sm.active{background:#cfe0f7;border-color:#9db8e0}
   button.sm b,button.sm i{font-family:Georgia,serif}
-  .ftcolor{flex-direction:column;gap:0;width:24px}
-  .ftcolor .bar{width:14px;height:3px;border-radius:1px}
+  .ftcolor{flex-direction:column;gap:1px;width:26px}
+  .ftcolor .bar{width:15px;height:3px;border-radius:1px}
+  button.sm svg{width:17px;height:17px;display:block}
+  button.big svg{width:24px;height:24px;display:block}
+  button.sm .gl{font-size:14px;font-weight:600;font-family:Georgia,serif;line-height:1}
+  button.sm .ar{font-size:8px;margin-left:1px}
+  button.sm.wide{width:auto;padding:0 7px;gap:5px;font-size:12px}
 
   select.combo,input.combo{height:22px;border:1px solid #bcbcbc;background:#fff;border-radius:2px;font-size:12px;padding:0 4px;color:#222;font-family:var(--ui-font)}
   select.fontname{width:118px}
   select.fontsize{width:46px}
 
-  .style-gallery{display:flex;gap:2px;align-items:center}
-  .style-card{border:1px solid #d2d0ce;background:#fff;border-radius:2px;height:54px;width:62px;display:flex;flex-direction:column;justify-content:center;padding:4px 6px;cursor:pointer;overflow:hidden}
-  .style-card:hover{border-color:var(--word-blue);box-shadow:0 0 0 1px var(--word-blue) inset}
-  .style-card .nm{font-size:10px;color:#666}
-  .style-card .pv{font-weight:400;color:#333;white-space:nowrap;overflow:hidden}
-  .style-card[data-style="h1"] .pv{font-size:15px;font-weight:600;color:var(--word-blue)}
-  .style-card[data-style="h2"] .pv{font-size:13px;font-weight:600;color:#2e74b5}
-  .style-card[data-style="title"] .pv{font-size:18px;color:#333}
 
   /* ============ RULER ============ */
   .ruler{height:20px;background:var(--doc-bg);display:flex;justify-content:center;align-items:center;border-bottom:1px solid #cfcfcf}
@@ -135,7 +132,6 @@
   .page th,.page td{border:1px solid #999;padding:4px 8px;text-align:left}
   .page th{background:#f0f4fa}
   .page ul.task li{list-style:none;margin-left:-.3in}
-  .page:empty:before{content:attr(data-placeholder);color:#bbb}
 
   /* ============ STATUS BAR ============ */
   .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
@@ -196,18 +192,22 @@
 
     <!-- HOME -->
     <div class="ribbon-panel active" data-panel="home">
+      <!-- Clipboard -->
       <div class="rgroup">
         <div class="rgroup-body">
-          <button class="big" data-cmd="paste"><span class="ic">📋</span><span class="cap">Paste ▾</span></button>
+          <button class="big" data-cmd="paste" title="Paste">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="8" y="2.6" width="8" height="3.2" rx="1"/><path d="M9 4H6.2A1.7 1.7 0 0 0 4.5 5.7v14.1A1.7 1.7 0 0 0 6.2 21.5h11.6a1.7 1.7 0 0 0 1.7-1.7V5.7A1.7 1.7 0 0 0 17.8 4H15"/></svg></span>
+            <span class="cap">Paste ▾</span></button>
           <div class="rcol">
-            <button class="sm" data-exec="cut" title="Cut">✂️</button>
-            <button class="sm" data-exec="copy" title="Copy">⧉</button>
-            <button class="sm" data-cmd="format-painter" title="Format Painter">🖌️</button>
+            <button class="sm" data-exec="cut" title="Cut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M7.7 7.7 20 18M7.7 16.3 20 6"/></svg></button>
+            <button class="sm" data-exec="copy" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="1.8"/><path d="M5 15.5H4.3A1.8 1.8 0 0 1 2.5 13.7V4.3A1.8 1.8 0 0 1 4.3 2.5h9.4A1.8 1.8 0 0 1 15.5 4.3V5"/></svg></button>
+            <button class="sm" data-cmd="format-painter" title="Format Painter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4" y="3" width="14" height="5.4" rx="1"/><path d="M14 8.4v2.1a1.6 1.6 0 0 1-1.6 1.6H9.2A1.7 1.7 0 0 0 7.5 13.8v1.7"/><rect x="5.7" y="15.5" width="3.6" height="5.5" rx="1"/></svg></button>
           </div>
         </div>
         <div class="rgroup-label">Clipboard</div>
       </div>
 
+      <!-- Font -->
       <div class="rgroup">
         <div class="rgroup-body">
           <div class="rcol">
@@ -222,8 +222,9 @@
                 <option>12</option><option>14</option><option>16</option><option>18</option>
                 <option>20</option><option>24</option><option>28</option><option>36</option><option>48</option>
               </select>
-              <button class="sm" data-cmd="grow" title="Grow Font">A▲</button>
-              <button class="sm" data-cmd="shrink" title="Shrink Font">A▼</button>
+              <button class="sm" data-cmd="grow" title="Grow Font"><span class="gl">A</span><span class="ar">▲</span></button>
+              <button class="sm" data-cmd="shrink" title="Shrink Font"><span class="gl" style="font-size:11px">A</span><span class="ar">▼</span></button>
+              <button class="sm" data-exec="removeFormat" title="Clear All Formatting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 18 5 14.5a1.6 1.6 0 0 1 0-2.3l7-7a1.6 1.6 0 0 1 2.3 0l3.5 3.5a1.6 1.6 0 0 1 0 2.3L12 18z"/><line x1="8.5" y1="18" x2="19" y2="18"/></svg></button>
             </div>
             <div class="rrow">
               <button class="sm" data-exec="bold" title="Bold (Ctrl+B)"><b>B</b></button>
@@ -233,58 +234,37 @@
               <button class="sm" data-exec="subscript" title="Subscript">x₂</button>
               <button class="sm" data-exec="superscript" title="Superscript">x²</button>
               <button class="sm" data-cmd="inlineCode" title="Inline code">&lt;/&gt;</button>
-              <button class="sm ftcolor" data-cmd="highlight" title="Highlight"><span>ab</span><span class="bar" style="background:#ffff00"></span></button>
-              <button class="sm ftcolor" data-cmd="fontcolor" title="Font Color"><span style="color:#c00">A</span><span class="bar" style="background:#c00000"></span></button>
+              <button class="sm ftcolor" data-cmd="highlight" title="Text Highlight Color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14.3 5.2 18.8 9.7l-7.7 7.7-4.5-4.5z"/><path d="M6.6 12.9 4.4 17.4l2.6.9 1.7-1.4z" fill="currentColor" stroke="none"/></svg><span class="bar" style="background:#ffd400"></span></button>
+              <button class="sm ftcolor" data-cmd="fontcolor" title="Font Color"><span class="gl">A</span><span class="bar" style="background:#c00000"></span></button>
             </div>
           </div>
         </div>
         <div class="rgroup-label">Font</div>
       </div>
 
+      <!-- Paragraph -->
       <div class="rgroup">
         <div class="rgroup-body">
           <div class="rcol">
             <div class="rrow">
-              <button class="sm" data-exec="insertUnorderedList" title="Bullets">•≡</button>
-              <button class="sm" data-exec="insertOrderedList" title="Numbering">1.≡</button>
-              <button class="sm" data-cmd="task" title="Task list">☑≡</button>
-              <button class="sm" data-exec="outdent" title="Decrease Indent">⇤</button>
-              <button class="sm" data-exec="indent" title="Increase Indent">⇥</button>
-              <button class="sm" data-cmd="hr" title="Horizontal line">―</button>
+              <button class="sm" data-exec="insertUnorderedList" title="Bullets"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="4.2" cy="6" r="1.7"/><circle cx="4.2" cy="12" r="1.7"/><circle cx="4.2" cy="18" r="1.7"/><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/></svg></button>
+              <button class="sm" data-exec="insertOrderedList" title="Numbering"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/><text x="1.4" y="8.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">1</text><text x="1.4" y="14.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">2</text><text x="1.4" y="20.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">3</text></svg></button>
+              <button class="sm" data-cmd="task" title="Task List"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="6" height="6" rx="1.2"/><path d="M3.7 7 5 8.3 7.3 5.4"/><rect x="2.5" y="14" width="6" height="6" rx="1.2"/><line x1="11.5" y1="7" x2="20" y2="7"/><line x1="11.5" y1="17" x2="20" y2="17"/></svg></button>
+              <button class="sm" data-exec="outdent" title="Decrease Indent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="20" y2="5"/><line x1="11" y1="10" x2="20" y2="10"/><line x1="11" y1="14" x2="20" y2="14"/><line x1="4" y1="19" x2="20" y2="19"/><path d="M7 9 4 12l3 3"/></svg></button>
+              <button class="sm" data-exec="indent" title="Increase Indent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="20" y2="5"/><line x1="11" y1="10" x2="20" y2="10"/><line x1="11" y1="14" x2="20" y2="14"/><line x1="4" y1="19" x2="20" y2="19"/><path d="M4 9l3 3-3 3"/></svg></button>
             </div>
             <div class="rrow">
-              <button class="sm" data-exec="justifyLeft" title="Align Left">⬅</button>
-              <button class="sm" data-exec="justifyCenter" title="Center">⬌</button>
-              <button class="sm" data-exec="justifyRight" title="Align Right">➡</button>
-              <button class="sm" data-exec="justifyFull" title="Justify">☰</button>
-              <button class="sm" data-cmd="quote" title="Quote">❝</button>
-              <button class="sm" data-exec="removeFormat" title="Clear Formatting">⌫</button>
+              <button class="sm" data-exec="justifyLeft" title="Align Left"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="18" height="2" rx="1"/><rect x="3" y="9.5" width="11" height="2" rx="1"/><rect x="3" y="14.5" width="18" height="2" rx="1"/><rect x="3" y="19.5" width="11" height="2" rx="1"/></svg></button>
+              <button class="sm" data-exec="justifyCenter" title="Center"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="18" height="2" rx="1"/><rect x="6.5" y="9.5" width="11" height="2" rx="1"/><rect x="3" y="14.5" width="18" height="2" rx="1"/><rect x="6.5" y="19.5" width="11" height="2" rx="1"/></svg></button>
+              <button class="sm" data-exec="justifyRight" title="Align Right"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="18" height="2" rx="1"/><rect x="10" y="9.5" width="11" height="2" rx="1"/><rect x="3" y="14.5" width="18" height="2" rx="1"/><rect x="10" y="19.5" width="11" height="2" rx="1"/></svg></button>
+              <button class="sm" data-exec="justifyFull" title="Justify"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="18" height="2" rx="1"/><rect x="3" y="9.5" width="18" height="2" rx="1"/><rect x="3" y="14.5" width="18" height="2" rx="1"/><rect x="3" y="19.5" width="11" height="2" rx="1"/></svg></button>
+              <button class="sm" data-cmd="linespacing" title="Line Spacing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15"/><path d="M3.6 6.6 6 4.2l2.4 2.4"/><path d="M3.6 17.4 6 19.8l2.4-2.4"/><line x1="11" y1="6" x2="20" y2="6"/><line x1="11" y1="12" x2="20" y2="12"/><line x1="11" y1="18" x2="20" y2="18"/></svg></button>
+              <button class="sm" data-cmd="quote" title="Quote"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 6H4.5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.6c-.1 1.8-1 2.7-2.6 2.9V18c2.9-.2 4.5-2.1 4.5-5.2V7a1 1 0 0 0-1-1zm10 0h-5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.6c-.1 1.8-1 2.7-2.6 2.9V18c2.9-.2 4.5-2.1 4.5-5.2V7a1 1 0 0 0-1-1z"/></svg></button>
+              <button class="sm" data-cmd="hr" title="Horizontal Line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.8"/><line x1="4" y1="7" x2="14" y2="7" stroke-width="1.4" opacity=".4"/><line x1="4" y1="17" x2="17" y2="17" stroke-width="1.4" opacity=".4"/></svg></button>
             </div>
           </div>
         </div>
         <div class="rgroup-label">Paragraph</div>
-      </div>
-
-      <div class="rgroup">
-        <div class="rgroup-body">
-          <div class="style-gallery" id="styleGallery">
-            <div class="style-card" data-style="p"><div class="pv">Normal</div><div class="nm">Normal</div></div>
-            <div class="style-card" data-style="h1"><div class="pv">Heading 1</div><div class="nm">Heading 1</div></div>
-            <div class="style-card" data-style="h2"><div class="pv">Heading 2</div><div class="nm">Heading 2</div></div>
-            <div class="style-card" data-style="title"><div class="pv">Title</div><div class="nm">Title</div></div>
-          </div>
-        </div>
-        <div class="rgroup-label">Styles</div>
-      </div>
-
-      <div class="rgroup">
-        <div class="rgroup-body">
-          <div class="rcol">
-            <button class="sm" data-cmd="find" title="Find">🔍 Find</button>
-            <button class="sm" data-cmd="selectall" title="Select All">▦ Select</button>
-          </div>
-        </div>
-        <div class="rgroup-label">Editing</div>
       </div>
     </div>
 
@@ -315,8 +295,7 @@
 
   <!-- DOCUMENT -->
   <div class="stage" id="stage">
-    <div class="page" id="editor" contenteditable="true" spellcheck="true"
-         data-placeholder="Start typing… your document saves as clean Markdown."></div>
+    <div class="page" id="editor" contenteditable="true" spellcheck="true"></div>
   </div>
 
   <!-- STATUS BAR -->
@@ -440,8 +419,21 @@
       case 'zoomin': setZoom(zoom+10); break;
       case 'zoomout': setZoom(zoom-10); break;
       case 'zoomreset': setZoom(100); break;
+      case 'linespacing': cycleLineSpacing(); break;
     }
     sync();
+  }
+  const SPACINGS=[1.5,2.0,1.0,1.15];let spIdx=0;
+  function cycleLineSpacing(){
+    const el=blockEl()||editor;spIdx=(spIdx+1)%SPACINGS.length;
+    el.style.lineHeight=SPACINGS[spIdx];
+  }
+  // Current block element the caret sits in
+  function blockEl(){
+    let n=window.getSelection().anchorNode;if(!n)return null;
+    let el=n.nodeType===3?n.parentElement:n;
+    while(el&&el!==editor&&!/^(P|H1|H2|H3|H4|H5|H6|DIV|LI|BLOCKQUOTE|PRE)$/.test(el.tagName))el=el.parentElement;
+    return el&&el!==editor?el:null;
   }
   async function navigatorPaste(){ try{const t=await navigator.clipboard.readText();document.execCommand('insertText',false,t);}catch(_){} }
   function nudgeFont(dir){
@@ -458,10 +450,60 @@
   document.addEventListener('keydown',e=>{
     const mod=e.metaKey||e.ctrlKey;if(!mod)return;
     const k=e.key.toLowerCase();
+    // Heading shortcuts: Cmd/Ctrl+Alt+1..4 = headings, +0 = Normal
+    if(e.altKey && '01234'.includes(e.key)){
+      e.preventDefault();
+      applyStyle(e.key==='0'?'p':'h'+e.key);
+      return;
+    }
     if(k==='s'){e.preventDefault();saveMarkdown();}
     else if(k==='k'){e.preventDefault();handleCmd('link');}
     else if(['b','i','u'].includes(k)){setTimeout(updateActive,0);}
   });
+
+  /* MARKDOWN AUTO-FORMAT — type a token + space at the start of a line.
+     Mirrors how the Styles gallery used to work, but stays out of the way. */
+  editor.addEventListener('keydown',e=>{
+    if(e.key!==' '||e.metaKey||e.ctrlKey)return;
+    const sel=window.getSelection();
+    if(!sel.isCollapsed)return;
+    const el=blockEl();
+    if(!el||/^(PRE)$/.test(el.tagName))return;
+    const token=el.textContent;
+    const map={'#':()=>fmt('h1'),'##':()=>fmt('h2'),'###':()=>fmt('h3'),'####':()=>fmt('h4'),
+               '>':()=>fmt('blockquote'),'-':list('ul'),'*':list('ul'),'+':list('ul'),
+               '1.':list('ol'),'[]':task,'[x]':task,'[ ]':task};
+    if(Object.prototype.hasOwnProperty.call(map,token)){
+      e.preventDefault();
+      clearBlock(el);
+      map[token]();
+      sync();
+    }
+    function fmt(tag){document.execCommand('formatBlock',false,tag);}
+    function list(kind){return ()=>document.execCommand(kind==='ol'?'insertOrderedList':'insertUnorderedList');}
+    function task(){
+      const li=blockEl();
+      document.execCommand('insertUnorderedList');
+      const ul=blockEl()&&blockEl().closest?blockEl().closest('ul'):null;
+      if(ul){ul.classList.add('task');const first=ul.querySelector('li');if(first&&!/^[☐☑]/.test(first.textContent))first.textContent='☐ '+first.textContent;}
+    }
+  });
+  // empty the current block's text, keeping the caret inside it
+  function clearBlock(el){
+    el.textContent='';
+    const r=document.createRange();r.selectNodeContents(el);r.collapse(true);
+    const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+  }
+  // Make sure there's always a paragraph to type into (so auto-format works on line 1)
+  function ensureBlock(){
+    if(!editor.querySelector('p,h1,h2,h3,h4,ul,ol,blockquote,pre,table')){
+      editor.innerHTML='<p><br></p>';
+      const p=editor.firstChild,r=document.createRange();
+      r.selectNodeContents(p);r.collapse(true);
+      const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+    }
+  }
+  editor.addEventListener('focus',()=>{if(!editor.textContent.trim())ensureBlock();});
 
   /* ACTIVE STATE + COUNTS */
   function updateActive(){
@@ -499,7 +541,7 @@
   }
   function newDoc(){
     if(editor.innerText.trim()&&!confirm('Start a new document? Unsaved changes will be cleared.'))return;
-    editor.innerHTML='';docName.textContent='Document1';editor.focus();sync();
+    editor.innerHTML='<p><br></p>';docName.textContent='Document1';editor.focus();ensureBlock();sync();
   }
 
   /* OPEN */
@@ -664,7 +706,7 @@
     }
   });
 
-  restore();updateActive();editor.focus();
+  restore();ensureBlock();updateActive();editor.focus();
 })();
 </script>
 </body>
