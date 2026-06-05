@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Document1 - helloword</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" href="icon-256.png">
 <style>
   :root{
     --word-blue:#2b579a;
@@ -35,9 +37,10 @@
   }
   .qat{display:flex;align-items:center;gap:1px}
   .qat .wlogo{
-    width:20px;height:20px;background:#fff;color:var(--word-blue);
-    border-radius:3px;display:flex;align-items:center;justify-content:center;
-    font-weight:800;font-family:Georgia,serif;margin-right:8px;font-size:14px;
+    min-width:24px;height:20px;padding:0 4px;background:var(--word-blue);color:#fff;
+    border:1px solid rgba(255,255,255,.4);
+    border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-family:var(--ui-font);margin-right:8px;font-size:12px;letter-spacing:-.5px;
   }
   .qat button{
     background:transparent;border:none;color:#fff;width:24px;height:24px;
@@ -166,7 +169,7 @@
   <!-- TITLE BAR -->
   <div class="title-bar">
     <div class="qat">
-      <span class="wlogo">W</span>
+      <span class="wlogo">hw</span>
       <button id="qSave" title="Save (Ctrl+S)">💾</button>
       <button id="qUndo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a5 5 0 0 1 0 10h-3"/><path d="M7.5 5.5 4 9l3.5 3.5"/></svg></button>
       <button id="qRedo" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9H9a5 5 0 0 0 0 10h3"/><path d="M16.5 5.5 20 9l-3.5 3.5"/></svg></button>
@@ -226,8 +229,6 @@
                 <option>12</option><option>14</option><option>16</option><option>18</option>
                 <option>20</option><option>24</option><option>28</option><option>36</option><option>48</option>
               </select>
-              <button class="sm" data-cmd="grow" title="Grow Font"><span class="gl">A</span><span class="ar">▲</span></button>
-              <button class="sm" data-cmd="shrink" title="Shrink Font"><span class="gl" style="font-size:11px">A</span><span class="ar">▼</span></button>
               <button class="sm" data-exec="removeFormat" title="Clear All Formatting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 18 5 14.5a1.6 1.6 0 0 1 0-2.3l7-7a1.6 1.6 0 0 1 2.3 0l3.5 3.5a1.6 1.6 0 0 1 0 2.3L12 18z"/><line x1="8.5" y1="18" x2="19" y2="18"/></svg></button>
             </div>
             <div class="rrow">
