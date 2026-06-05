@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Document1 - Word</title>
+<style>
+  :root{
+    --word-blue:#2b579a;
+    --word-blue-dark:#1e3d6f;
+    --word-blue-light:#eaf1fb;
+    --ribbon-bg:#f3f2f1;
+    --ribbon-border:#d2d0ce;
+    --doc-bg:#e6e6e6;
+    --ink:#000;
+    --ui-font:"Segoe UI","Segoe UI Web (West European)",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--ui-font);
+    font-size:13px;
+    background:var(--doc-bg);
+    color:var(--ink);
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ============ TITLE BAR + QUICK ACCESS TOOLBAR ============ */
+  .title-bar{
+    background:var(--word-blue);
+    color:#fff;height:32px;display:flex;align-items:center;
+    padding:0 8px;gap:2px;user-select:none;font-size:12px;
+  }
+  .qat{display:flex;align-items:center;gap:1px}
+  .qat .wlogo{
+    width:20px;height:20px;background:#fff;color:var(--word-blue);
+    border-radius:3px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-family:Georgia,serif;margin-right:8px;font-size:14px;
+  }
+  .qat button{
+    background:transparent;border:none;color:#fff;width:24px;height:24px;
+    border-radius:3px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
+  }
+  .qat button:hover{background:rgba(255,255,255,.18)}
+  .title-center{flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+  .title-center .docttl{
+    color:#fff;background:transparent;border:1px solid transparent;border-radius:3px;
+    padding:2px 8px;font-size:12px;text-align:center;outline:none;min-width:120px;max-width:50%;
+    font-family:var(--ui-font);
+  }
+  .title-center .docttl:hover{border-color:rgba(255,255,255,.35)}
+  .title-center .docttl:focus{background:rgba(255,255,255,.15)}
+  .title-center .sub{opacity:.75}
+  .win-controls{display:flex;gap:0}
+  .win-controls button{background:transparent;border:none;color:#fff;width:34px;height:32px;cursor:default;font-size:11px}
+  .win-controls button:hover{background:rgba(255,255,255,.16)}
+  .win-controls .close:hover{background:#e81123}
+
+  /* ============ RIBBON TABS ============ */
+  .ribbon-tabs{background:var(--word-blue);height:30px;display:flex;align-items:flex-end;padding:0 6px;gap:2px;user-select:none}
+  .ribbon-tabs .tab{
+    color:#fff;background:transparent;border:none;padding:6px 12px;font-size:13px;font-family:var(--ui-font);
+    cursor:pointer;border-radius:4px 4px 0 0;line-height:1;position:relative;top:1px;
+  }
+  .ribbon-tabs .tab.file{background:var(--word-blue-dark);font-weight:600;margin-right:4px}
+  .ribbon-tabs .tab:hover:not(.active):not(.file){background:rgba(255,255,255,.16)}
+  .ribbon-tabs .tab.active{background:var(--ribbon-bg);color:var(--word-blue);font-weight:600}
+
+  /* ============ RIBBON BODY ============ */
+  .ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--ribbon-border);height:94px;display:flex;align-items:stretch;padding:4px 4px 0;overflow-x:auto;overflow-y:hidden}
+  .ribbon-panel{display:none;align-items:stretch;height:100%}
+  .ribbon-panel.active{display:flex}
+  .rgroup{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:3px 6px 2px;position:relative;min-height:100%}
+  .rgroup:after{content:"";position:absolute;right:0;top:6px;bottom:18px;width:1px;background:var(--ribbon-border)}
+  .rgroup:last-child:after{display:none}
+  .rgroup-body{display:flex;align-items:center;gap:2px;flex:1}
+  .rgroup-label{font-size:11px;color:#666;text-align:center;padding-bottom:2px}
+  .rcol{display:flex;flex-direction:column;gap:1px;justify-content:center}
+  .rrow{display:flex;align-items:center;gap:1px}
+
+  button.big{background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 8px;min-width:54px;height:100%;color:#444;font-size:12px;font-family:var(--ui-font)}
+  button.big .ic{font-size:22px;line-height:1}
+  button.big .cap{font-size:11px;display:flex;align-items:center;gap:2px}
+  button.big:hover{background:#dcdbda;border-color:#c7c6c5}
+
+  button.sm{background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#444;font-size:13px;padding:0;font-family:var(--ui-font)}
+  button.sm:hover{background:#dcdbda;border-color:#c7c6c5}
+  button.sm.active{background:#cfe0f7;border-color:#9db8e0}
+  button.sm b,button.sm i{font-family:Georgia,serif}
+  .ftcolor{flex-direction:column;gap:0;width:24px}
+  .ftcolor .bar{width:14px;height:3px;border-radius:1px}
+
+  select.combo,input.combo{height:22px;border:1px solid #bcbcbc;background:#fff;border-radius:2px;font-size:12px;padding:0 4px;color:#222;font-family:var(--ui-font)}
+  select.fontname{width:118px}
+  select.fontsize{width:46px}
+
+  .style-gallery{display:flex;gap:2px;align-items:center}
+  .style-card{border:1px solid #d2d0ce;background:#fff;border-radius:2px;height:54px;width:62px;display:flex;flex-direction:column;justify-content:center;padding:4px 6px;cursor:pointer;overflow:hidden}
+  .style-card:hover{border-color:var(--word-blue);box-shadow:0 0 0 1px var(--word-blue) inset}
+  .style-card .nm{font-size:10px;color:#666}
+  .style-card .pv{font-weight:400;color:#333;white-space:nowrap;overflow:hidden}
+  .style-card[data-style="h1"] .pv{font-size:15px;font-weight:600;color:var(--word-blue)}
+  .style-card[data-style="h2"] .pv{font-size:13px;font-weight:600;color:#2e74b5}
+  .style-card[data-style="title"] .pv{font-size:18px;color:#333}
+
+  /* ============ RULER ============ */
+  .ruler{height:20px;background:var(--doc-bg);display:flex;justify-content:center;align-items:center;border-bottom:1px solid #cfcfcf}
+  .ruler .track{width:8.5in;max-width:calc(100% - 32px);height:14px;background:#fff;border:1px solid #c9c9c9;position:relative;background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(1in - 1px),#d8d8d8 calc(1in - 1px),#d8d8d8 1in)}
+  .ruler .margin{position:absolute;top:0;bottom:0;background:#d9d9d9}
+
+  /* ============ DOCUMENT STAGE ============ */
+  .stage{flex:1;overflow:auto;padding:24px 0 80px;display:flex;flex-direction:column;align-items:center}
+  .page{
+    background:#fff;width:8.5in;max-width:calc(100% - 32px);min-height:11in;padding:1in;
+    box-shadow:0 0 0 1px #d0d0d0,0 3px 10px rgba(0,0,0,.16);outline:none;color:#000;
+    font-family:Calibri,"Segoe UI",Helvetica,Arial,sans-serif;font-size:11pt;line-height:1.5;transform-origin:top center;
+  }
+  .page p{margin:0 0 8pt}
+  .page h1{font-size:16pt;font-weight:400;color:#2e74b5;margin:0 0 6pt;line-height:1.2}
+  .page h2{font-size:13pt;font-weight:600;color:#2e74b5;margin:8pt 0 4pt}
+  .page h3{font-size:12pt;font-weight:600;color:#1f4d78;margin:8pt 0 4pt}
+  .page h4{font-size:11pt;font-weight:600;font-style:italic;color:#2e74b5;margin:8pt 0 4pt}
+  .page ul,.page ol{margin:0 0 8pt;padding-left:.5in}
+  .page li{margin:2pt 0}
+  .page blockquote{margin:0 0 8pt;padding:2pt 14pt;border-left:3px solid #2e74b5;color:#444}
+  .page pre{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;font-family:Consolas,"SF Mono",Menlo,monospace;font-size:10pt;margin:0 0 8pt;overflow:auto}
+  .page code{font-family:Consolas,"SF Mono",Menlo,monospace;font-size:.92em;background:#f0f0f3;border-radius:3px;padding:.05em .3em}
+  .page pre code{background:none;padding:0}
+  .page a{color:#0563c1;text-decoration:underline}
+  .page img{max-width:100%;height:auto}
+  .page hr{border:none;border-top:1px solid #bbb;margin:10pt 0}
+  .page table{border-collapse:collapse;margin:0 0 8pt;width:100%}
+  .page th,.page td{border:1px solid #999;padding:4px 8px;text-align:left}
+  .page th{background:#f0f4fa}
+  .page ul.task li{list-style:none;margin-left:-.3in}
+  .page:empty:before{content:attr(data-placeholder);color:#bbb}
+
+  /* ============ STATUS BAR ============ */
+  .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
+  .status-bar .si{display:flex;align-items:center;gap:5px;padding:0 6px;height:100%;cursor:default}
+  .status-bar .si:hover{background:rgba(255,255,255,.12)}
+  .status-bar .spacer{flex:1}
+  .status-bar .vbtn{background:transparent;border:none;color:#fff;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:2px}
+  .status-bar .vbtn:hover{background:rgba(255,255,255,.16)}
+  .zoom{display:flex;align-items:center;gap:8px}
+  .zoom input[type=range]{width:90px;accent-color:#fff}
+  .zoom .zval{width:38px;text-align:right}
+
+  .filemenu{position:absolute;left:0;top:62px;background:#fff;border:1px solid #c9c9c9;box-shadow:0 6px 20px rgba(0,0,0,.22);border-radius:0 0 4px 4px;z-index:50;min-width:230px;padding:4px 0}
+  .filemenu button{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;padding:9px 16px;font-size:13px;cursor:pointer;color:#222;text-align:left;font-family:var(--ui-font)}
+  .filemenu button:hover{background:var(--word-blue-light)}
+  .filemenu .ic{width:18px;text-align:center}
+  .filemenu hr{border:none;border-top:1px solid #eee;margin:4px 0}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+
+  <!-- TITLE BAR -->
+  <div class="title-bar">
+    <div class="qat">
+      <span class="wlogo">W</span>
+      <button id="qSave" title="Save (Ctrl+S)">💾</button>
+      <button id="qUndo" title="Undo (Ctrl+Z)">↶</button>
+      <button id="qRedo" title="Redo (Ctrl+Y)">↷</button>
+    </div>
+    <div class="title-center">
+      <span class="docttl" id="docName" contenteditable="true" spellcheck="false">Document1</span>
+      <span class="sub">— Word</span>
+    </div>
+    <div class="win-controls">
+      <button title="Minimize">&#8211;</button>
+      <button title="Restore">&#9633;</button>
+      <button class="close" title="Close">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- RIBBON TABS -->
+  <div class="ribbon-tabs" id="ribbonTabs">
+    <button class="tab file" data-tab="file">File</button>
+    <button class="tab active" data-tab="home">Home</button>
+    <button class="tab" data-tab="insert">Insert</button>
+    <button class="tab" data-tab="draw">Draw</button>
+    <button class="tab" data-tab="design">Design</button>
+    <button class="tab" data-tab="layout">Layout</button>
+    <button class="tab" data-tab="references">References</button>
+    <button class="tab" data-tab="review">Review</button>
+    <button class="tab" data-tab="view">View</button>
+    <button class="tab" data-tab="help">Help</button>
+  </div>
+
+  <!-- RIBBON BODY -->
+  <div class="ribbon" id="ribbon">
+
+    <!-- HOME -->
+    <div class="ribbon-panel active" data-panel="home">
+      <div class="rgroup">
+        <div class="rgroup-body">
+          <button class="big" data-cmd="paste"><span class="ic">📋</span><span class="cap">Paste ▾</span></button>
+          <div class="rcol">
+            <button class="sm" data-exec="cut" title="Cut">✂️</button>
+            <button class="sm" data-exec="copy" title="Copy">⧉</button>
+            <button class="sm" data-cmd="format-painter" title="Format Painter">🖌️</button>
+          </div>
+        </div>
+        <div class="rgroup-label">Clipboard</div>
+      </div>
+
+      <div class="rgroup">
+        <div class="rgroup-body">
+          <div class="rcol">
+            <div class="rrow">
+              <select class="combo fontname" id="fontName" title="Font">
+                <option>Calibri</option><option>Arial</option><option>Cambria</option>
+                <option>Georgia</option><option>Times New Roman</option><option>Verdana</option>
+                <option>Courier New</option><option>Consolas</option><option>Segoe UI</option>
+              </select>
+              <select class="combo fontsize" id="fontSize" title="Font Size">
+                <option>8</option><option>9</option><option>10</option><option selected>11</option>
+                <option>12</option><option>14</option><option>16</option><option>18</option>
+                <option>20</option><option>24</option><option>28</option><option>36</option><option>48</option>
+              </select>
+              <button class="sm" data-cmd="grow" title="Grow Font">A▲</button>
+              <button class="sm" data-cmd="shrink" title="Shrink Font">A▼</button>
+            </div>
+            <div class="rrow">
+              <button class="sm" data-exec="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+              <button class="sm" data-exec="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+              <button class="sm" data-exec="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+              <button class="sm" data-exec="strikeThrough" title="Strikethrough"><s>abc</s></button>
+              <button class="sm" data-exec="subscript" title="Subscript">x₂</button>
+              <button class="sm" data-exec="superscript" title="Superscript">x²</button>
+              <button class="sm" data-cmd="inlineCode" title="Inline code">&lt;/&gt;</button>
+              <button class="sm ftcolor" data-cmd="highlight" title="Highlight"><span>ab</span><span class="bar" style="background:#ffff00"></span></button>
+              <button class="sm ftcolor" data-cmd="fontcolor" title="Font Color"><span style="color:#c00">A</span><span class="bar" style="background:#c00000"></span></button>
+            </div>
+          </div>
+        </div>
+        <div class="rgroup-label">Font</div>
+      </div>
+
+      <div class="rgroup">
+        <div class="rgroup-body">
+          <div class="rcol">
+            <div class="rrow">
+              <button class="sm" data-exec="insertUnorderedList" title="Bullets">•≡</button>
+              <button class="sm" data-exec="insertOrderedList" title="Numbering">1.≡</button>
+              <button class="sm" data-cmd="task" title="Task list">☑≡</button>
+              <button class="sm" data-exec="outdent" title="Decrease Indent">⇤</button>
+              <button class="sm" data-exec="indent" title="Increase Indent">⇥</button>
+              <button class="sm" data-cmd="hr" title="Horizontal line">―</button>
+            </div>
+            <div class="rrow">
+              <button class="sm" data-exec="justifyLeft" title="Align Left">⬅</button>
+              <button class="sm" data-exec="justifyCenter" title="Center">⬌</button>
+              <button class="sm" data-exec="justifyRight" title="Align Right">➡</button>
+              <button class="sm" data-exec="justifyFull" title="Justify">☰</button>
+              <button class="sm" data-cmd="quote" title="Quote">❝</button>
+              <button class="sm" data-exec="removeFormat" title="Clear Formatting">⌫</button>
+            </div>
+          </div>
+        </div>
+        <div class="rgroup-label">Paragraph</div>
+      </div>
+
+      <div class="rgroup">
+        <div class="rgroup-body">
+          <div class="style-gallery" id="styleGallery">
+            <div class="style-card" data-style="p"><div class="pv">Normal</div><div class="nm">Normal</div></div>
+            <div class="style-card" data-style="h1"><div class="pv">Heading 1</div><div class="nm">Heading 1</div></div>
+            <div class="style-card" data-style="h2"><div class="pv">Heading 2</div><div class="nm">Heading 2</div></div>
+            <div class="style-card" data-style="title"><div class="pv">Title</div><div class="nm">Title</div></div>
+          </div>
+        </div>
+        <div class="rgroup-label">Styles</div>
+      </div>
+
+      <div class="rgroup">
+        <div class="rgroup-body">
+          <div class="rcol">
+            <button class="sm" data-cmd="find" title="Find">🔍 Find</button>
+            <button class="sm" data-cmd="selectall" title="Select All">▦ Select</button>
+          </div>
+        </div>
+        <div class="rgroup-label">Editing</div>
+      </div>
+    </div>
+
+    <!-- INSERT -->
+    <div class="ribbon-panel" data-panel="insert">
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="pagebreak"><span class="ic">📄</span><span class="cap">Page Break</span></button></div><div class="rgroup-label">Pages</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="table"><span class="ic">▦</span><span class="cap">Table ▾</span></button></div><div class="rgroup-label">Tables</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="image"><span class="ic">🖼️</span><span class="cap">Pictures</span></button></div><div class="rgroup-label">Illustrations</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="link"><span class="ic">🔗</span><span class="cap">Link</span></button><button class="big" data-cmd="hr"><span class="ic">―</span><span class="cap">H. Line</span></button></div><div class="rgroup-label">Links</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="codeblock"><span class="ic">&lt;/&gt;</span><span class="cap">Code Block</span></button><button class="big" data-cmd="quote"><span class="ic">❝</span><span class="cap">Quote</span></button></div><div class="rgroup-label">Blocks</div></div>
+    </div>
+
+    <!-- VIEW -->
+    <div class="ribbon-panel" data-panel="view">
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="zoomreset"><span class="ic">🔍</span><span class="cap">100%</span></button><button class="big" data-cmd="zoomin"><span class="ic">➕</span><span class="cap">Zoom In</span></button><button class="big" data-cmd="zoomout"><span class="ic">➖</span><span class="cap">Zoom Out</span></button></div><div class="rgroup-label">Zoom</div></div>
+    </div>
+
+    <div class="ribbon-panel" data-panel="draw"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Drawing tools aren't part of this Markdown editor.</div></div></div>
+    <div class="ribbon-panel" data-panel="design"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Design is handled by Markdown styles — see the Home tab.</div></div></div>
+    <div class="ribbon-panel" data-panel="layout"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Page layout is fixed (US Letter) for clean Markdown output.</div></div></div>
+    <div class="ribbon-panel" data-panel="references"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Use links and headings on the Home / Insert tabs.</div></div></div>
+    <div class="ribbon-panel" data-panel="review"><div class="rgroup"><div class="rgroup-body" id="reviewWC" style="color:#555;font-size:12px;padding:0 16px">Word count: 0</div></div></div>
+    <div class="ribbon-panel" data-panel="help"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">HelloWord — a Word-style editor that saves to Markdown (.md). Ctrl/Cmd+S to save.</div></div></div>
+  </div>
+
+  <!-- RULER -->
+  <div class="ruler"><div class="track"><div class="margin" style="left:0;width:1in"></div><div class="margin" style="right:0;width:1in"></div></div></div>
+
+  <!-- DOCUMENT -->
+  <div class="stage" id="stage">
+    <div class="page" id="editor" contenteditable="true" spellcheck="true"
+         data-placeholder="Start typing… your document saves as clean Markdown."></div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="si" id="pageStat">Page 1 of 1</span>
+    <span class="si" id="wordStat">0 words</span>
+    <span class="si" id="charStat">0 characters</span>
+    <span class="si">English (United States)</span>
+    <span class="si" id="saveStat">Autosaved</span>
+    <span class="spacer"></span>
+    <button class="vbtn" title="Read Mode">📖</button>
+    <button class="vbtn" title="Print Layout">📄</button>
+    <button class="vbtn" title="Web Layout">🌐</button>
+    <div class="zoom">
+      <button class="vbtn" data-cmd="zoomout">−</button>
+      <input type="range" id="zoomRange" min="50" max="200" value="100" step="10">
+      <button class="vbtn" data-cmd="zoomin">+</button>
+      <span class="zval" id="zoomVal">100%</span>
+    </div>
+  </div>
+
+  <!-- FILE MENU -->
+  <div class="filemenu hidden" id="fileMenu">
+    <button data-cmd="new"><span class="ic">🗎</span> New</button>
+    <button data-cmd="open"><span class="ic">📂</span> Open… <span style="opacity:.5;margin-left:auto">.md</span></button>
+    <hr>
+    <button data-cmd="save"><span class="ic">💾</span> Save as Markdown <span style="opacity:.5;margin-left:auto">Ctrl+S</span></button>
+    <button data-cmd="exporthtml"><span class="ic">🌐</span> Export as HTML</button>
+    <button data-cmd="print"><span class="ic">🖨️</span> Print</button>
+  </div>
+
+  <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" class="hidden">
+
+<script>
+(function(){
+  "use strict";
+  const editor=document.getElementById('editor');
+  const docName=document.getElementById('docName');
+  const fileInput=document.getElementById('fileInput');
+  const saveStat=document.getElementById('saveStat');
+  const fileMenu=document.getElementById('fileMenu');
+  const STORAGE='wordlike.doc.v2';
+  try{document.execCommand('styleWithCSS',false,true);}catch(_){}
+
+  /* TAB SWITCHING */
+  document.getElementById('ribbonTabs').addEventListener('click',e=>{
+    const tab=e.target.closest('.tab'); if(!tab)return;
+    const name=tab.dataset.tab;
+    if(name==='file'){ toggleFileMenu(); return; }
+    closeFileMenu();
+    document.querySelectorAll('.ribbon-tabs .tab').forEach(t=>t.classList.toggle('active',t===tab));
+    document.querySelectorAll('.ribbon-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));
+  });
+  function toggleFileMenu(){ fileMenu.classList.toggle('hidden'); }
+  function closeFileMenu(){ fileMenu.classList.add('hidden'); }
+  document.addEventListener('click',e=>{ if(!e.target.closest('#fileMenu')&&!e.target.closest('[data-tab="file"]'))closeFileMenu(); });
+  fileMenu.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){closeFileMenu();handleCmd(b.dataset.cmd);} });
+
+  /* RIBBON BUTTONS */
+  document.getElementById('ribbon').addEventListener('click',e=>{
+    const b=e.target.closest('button,.style-card'); if(!b)return;
+    if(b.classList.contains('style-card')){ applyStyle(b.dataset.style); return; }
+    if(b.dataset.exec){ editor.focus(); document.execCommand(b.dataset.exec,false,null); sync(); return; }
+    if(b.dataset.cmd) handleCmd(b.dataset.cmd);
+  });
+
+  document.getElementById('fontName').addEventListener('change',e=>{ editor.focus(); document.execCommand('fontName',false,e.target.value); sync(); });
+  document.getElementById('fontSize').addEventListener('change',e=>{ editor.focus(); applyFontSize(e.target.value); sync(); });
+  function applyFontSize(pt){
+    document.execCommand('fontSize',false,'7');
+    editor.querySelectorAll('font[size="7"]').forEach(f=>{ f.removeAttribute('size'); f.style.fontSize=pt+'pt'; });
+  }
+
+  /* QAT */
+  document.getElementById('qSave').onclick=()=>saveMarkdown();
+  document.getElementById('qUndo').onclick=()=>{editor.focus();document.execCommand('undo');sync();};
+  document.getElementById('qRedo').onclick=()=>{editor.focus();document.execCommand('redo');sync();};
+
+  /* STATUS/ZOOM */
+  document.querySelector('.status-bar').addEventListener('click',e=>{const b=e.target.closest('[data-cmd]');if(b)handleCmd(b.dataset.cmd);});
+  const zoomRange=document.getElementById('zoomRange'), zoomVal=document.getElementById('zoomVal');
+  let zoom=100;
+  zoomRange.addEventListener('input',()=>setZoom(+zoomRange.value));
+  function setZoom(z){ zoom=Math.max(50,Math.min(200,z)); editor.style.transform='scale('+(zoom/100)+')'; zoomRange.value=zoom; zoomVal.textContent=zoom+'%'; }
+
+  function applyStyle(style){
+    editor.focus();
+    if(style==='title')document.execCommand('formatBlock',false,'h1');
+    else if(style==='p')document.execCommand('formatBlock',false,'p');
+    else document.execCommand('formatBlock',false,style);
+    sync();
+  }
+
+  /* COMMAND DISPATCH */
+  function handleCmd(cmd){
+    if(!cmd)return;
+    editor.focus();
+    switch(cmd){
+      case 'new': newDoc(); break;
+      case 'open': fileInput.click(); break;
+      case 'save': saveMarkdown(); break;
+      case 'exporthtml': exportHtml(); break;
+      case 'print': window.print(); break;
+      case 'paste': navigatorPaste(); break;
+      case 'format-painter': break;
+      case 'inlineCode': wrapInlineCode(); break;
+      case 'task': insertTaskList(); break;
+      case 'quote': document.execCommand('formatBlock',false,'blockquote'); break;
+      case 'codeblock': document.execCommand('formatBlock',false,'pre'); break;
+      case 'hr': document.execCommand('insertHorizontalRule'); break;
+      case 'pagebreak': document.execCommand('insertHTML',false,'<hr><p><br></p>'); break;
+      case 'table': insertTable(); break;
+      case 'image': { const u=prompt('Image URL:','https://'); if(u)document.execCommand('insertImage',false,u); break; }
+      case 'link': { const u=prompt('Link URL:','https://'); if(u)document.execCommand('createLink',false,u); break; }
+      case 'grow': nudgeFont(1); break;
+      case 'shrink': nudgeFont(-1); break;
+      case 'highlight': document.execCommand('hiliteColor',false,'#ffff00'); break;
+      case 'fontcolor': document.execCommand('foreColor',false,'#c00000'); break;
+      case 'find': { const q=prompt('Find:'); if(q&&window.find)window.find(q); break; }
+      case 'selectall': document.execCommand('selectAll'); break;
+      case 'zoomin': setZoom(zoom+10); break;
+      case 'zoomout': setZoom(zoom-10); break;
+      case 'zoomreset': setZoom(100); break;
+    }
+    sync();
+  }
+  async function navigatorPaste(){ try{const t=await navigator.clipboard.readText();document.execCommand('insertText',false,t);}catch(_){} }
+  function nudgeFont(dir){
+    const sizes=[8,9,10,11,12,14,16,18,20,24,28,36,48];
+    const sel=document.getElementById('fontSize');let cur=+sel.value||11;
+    let idx=sizes.indexOf(cur);idx=Math.max(0,Math.min(sizes.length-1,(idx<0?3:idx)+dir));
+    sel.value=sizes[idx];applyFontSize(sizes[idx]);
+  }
+  function wrapInlineCode(){const sel=window.getSelection();if(!sel.rangeCount)return;const t=sel.toString();document.execCommand('insertHTML',false,'<code>'+(t?escapeHtml(t):'code')+'</code>');}
+  function insertTaskList(){document.execCommand('insertHTML',false,'<ul class="task"><li>☐ Task</li></ul>');}
+  function insertTable(){document.execCommand('insertHTML',false,'<table><thead><tr><th>Column A</th><th>Column B</th></tr></thead><tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table><p><br></p>');}
+
+  /* SHORTCUTS */
+  document.addEventListener('keydown',e=>{
+    const mod=e.metaKey||e.ctrlKey;if(!mod)return;
+    const k=e.key.toLowerCase();
+    if(k==='s'){e.preventDefault();saveMarkdown();}
+    else if(k==='k'){e.preventDefault();handleCmd('link');}
+    else if(['b','i','u'].includes(k)){setTimeout(updateActive,0);}
+  });
+
+  /* ACTIVE STATE + COUNTS */
+  function updateActive(){
+    [['bold'],['italic'],['underline'],['strikeThrough'],['justifyLeft'],['justifyCenter'],['justifyRight'],['justifyFull']].forEach(([c])=>{
+      const b=document.querySelector(`[data-exec="${c}"]`);
+      if(b){try{b.classList.toggle('active',document.queryCommandState(c));}catch(_){}}
+    });
+  }
+  document.addEventListener('selectionchange',()=>{if(document.activeElement===editor)updateActive();});
+  function updateCounts(){
+    const text=editor.innerText.replace(/ /g,' ').trim();
+    const words=text?text.split(/\s+/).filter(Boolean).length:0;
+    document.getElementById('wordStat').textContent=words+(words===1?' word':' words');
+    document.getElementById('charStat').textContent=text.length+' characters';
+    const rev=document.getElementById('reviewWC');if(rev)rev.textContent='Word count: '+words;
+    const ph=Math.max(1,Math.ceil((editor.scrollHeight||0)/(11*96)));
+    document.getElementById('pageStat').textContent='Page 1 of '+ph;
+  }
+
+  /* AUTOSAVE */
+  let t=null;
+  function sync(){
+    updateCounts();saveStat.textContent='Saving…';
+    clearTimeout(t);t=setTimeout(()=>{
+      try{localStorage.setItem(STORAGE,JSON.stringify({name:docName.textContent.trim()||'Document1',html:editor.innerHTML}));saveStat.textContent='Autosaved ✓';}
+      catch(_){saveStat.textContent='Autosave off';}
+    },400);
+  }
+  editor.addEventListener('input',sync);
+  docName.addEventListener('input',()=>{document.title=(docName.textContent.trim()||'Document1')+' - Word';sync();});
+  docName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();editor.focus();}});
+  function restore(){
+    try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;}}catch(_){}
+    document.title=(docName.textContent.trim()||'Document1')+' - Word';updateCounts();
+  }
+  function newDoc(){
+    if(editor.innerText.trim()&&!confirm('Start a new document? Unsaved changes will be cleared.'))return;
+    editor.innerHTML='';docName.textContent='Document1';editor.focus();sync();
+  }
+
+  /* OPEN */
+  fileInput.addEventListener('change',e=>{
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{editor.innerHTML=mdToHtml(ev.target.result);docName.textContent=file.name.replace(/\.(md|markdown|txt)$/i,'')||'Document1';document.title=docName.textContent+' - Word';editor.focus();sync();};
+    r.readAsText(file);fileInput.value='';
+  });
+
+  /* SAVE */
+  function saveMarkdown(){
+    const md=htmlToMd(editor);
+    const name=(docName.textContent.trim()||'Document1').replace(/[\/\\:*?"<>|]/g,'-');
+    const fn=name.endsWith('.md')?name:name+'.md';
+    download(fn,md,'text/markdown');saveStat.textContent='Saved '+fn+' ✓';
+  }
+  function exportHtml(){
+    const name=(docName.textContent.trim()||'Document1').replace(/[\/\\:*?"<>|]/g,'-');
+    const doc='<!DOCTYPE html><meta charset="utf-8"><title>'+escapeHtml(name)+'</title><body style="font-family:Calibri,Segoe UI,sans-serif;max-width:8.5in;margin:1in auto;line-height:1.5">'+editor.innerHTML+'</body>';
+    download(name+'.html',doc,'text/html');
+  }
+  function download(fn,data,type){
+    const blob=new Blob([data],{type:type+';charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fn;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }
+
+  /* ===== HTML -> MARKDOWN ===== */
+  function htmlToMd(root){const lines=[];blockChildren(root,lines,'');return lines.join('\n').replace(/\n{3,}/g,'\n\n').replace(/[ \t]+\n/g,'\n').trim()+'\n';}
+  function blockChildren(parent,out,indent){
+    parent.childNodes.forEach(node=>{
+      if(node.nodeType===3){const t=node.textContent.trim();if(t)out.push(indent+inline(node).trim(),'');return;}
+      if(node.nodeType!==1)return;
+      const tag=node.tagName.toLowerCase();
+      switch(tag){
+        case 'h1':out.push(indent+'# '+inline(node).trim(),'');break;
+        case 'h2':out.push(indent+'## '+inline(node).trim(),'');break;
+        case 'h3':out.push(indent+'### '+inline(node).trim(),'');break;
+        case 'h4':out.push(indent+'#### '+inline(node).trim(),'');break;
+        case 'h5':out.push(indent+'##### '+inline(node).trim(),'');break;
+        case 'h6':out.push(indent+'###### '+inline(node).trim(),'');break;
+        case 'p':case 'div':{const txt=inline(node).trim();if(txt)out.push(indent+txt,'');else if(tag==='div')blockChildren(node,out,indent);break;}
+        case 'br':out.push('');break;
+        case 'hr':out.push(indent+'---','');break;
+        case 'blockquote':{const inner=[];blockChildren(node,inner,'');inner.join('\n').trim().split('\n').forEach(l=>out.push(indent+'> '+l));out.push('');break;}
+        case 'pre':{const code=node.textContent.replace(/\n$/,'');out.push(indent+'```',...code.split('\n').map(l=>indent+l),indent+'```','');break;}
+        case 'ul':case 'ol':listToMd(node,out,indent,tag==='ol');out.push('');break;
+        case 'table':tableToMd(node,out,indent);out.push('');break;
+        case 'img':out.push(indent+`![${node.alt||''}](${node.getAttribute('src')||''})`,'');break;
+        default:{const txt=inline(node).trim();if(txt)out.push(indent+txt,'');else blockChildren(node,out,indent);}
+      }
+    });
+  }
+  function listToMd(listEl,out,indent,ordered){
+    let i=1;const isTask=listEl.classList.contains('task');
+    listEl.querySelectorAll(':scope > li').forEach(li=>{
+      const nested=[];let inlineHtml='';
+      li.childNodes.forEach(c=>{if(c.nodeType===1&&/^(ul|ol)$/i.test(c.tagName))nested.push(c);else inlineHtml+=c.nodeType===1?c.outerHTML:(c.textContent||'');});
+      let txt=inlineFromHtml(inlineHtml).trim();let marker=ordered?(i+'. '):'- ';
+      if(isTask||/^[☐☑✓]\s/.test(txt)){const checked=/^[☑✓]/.test(txt);txt=txt.replace(/^[☐☑✓]\s*/,'');marker='- ['+(checked?'x':' ')+'] ';}
+      out.push(indent+marker+txt);
+      nested.forEach(n=>listToMd(n,out,indent+'  ',n.tagName.toLowerCase()==='ol'));i++;
+    });
+  }
+  function tableToMd(table,out,indent){
+    const rows=[...table.querySelectorAll('tr')];if(!rows.length)return;
+    const toCells=tr=>[...tr.children].map(td=>inline(td).trim().replace(/\|/g,'\\|'));
+    const head=toCells(rows[0]);
+    out.push(indent+'| '+head.join(' | ')+' |');
+    out.push(indent+'| '+head.map(()=>'---').join(' | ')+' |');
+    rows.slice(1).forEach(r=>out.push(indent+'| '+toCells(r).join(' | ')+' |'));
+  }
+  function inline(node){let md='';node.childNodes.forEach(c=>md+=inlineNode(c));return md;}
+  function inlineFromHtml(html){const tmp=document.createElement('div');tmp.innerHTML=html;return inline(tmp);}
+  function inlineNode(node){
+    if(node.nodeType===3)return node.textContent.replace(/ /g,' ');
+    if(node.nodeType!==1)return '';
+    const tag=node.tagName.toLowerCase();const inner=()=>inline(node);
+    switch(tag){
+      case 'strong':case 'b':{const t=inner();return t.trim()?'**'+t+'**':t;}
+      case 'em':case 'i':{const t=inner();return t.trim()?'*'+t+'*':t;}
+      case 'u':{const t=inner();return t.trim()?'<u>'+t+'</u>':t;}
+      case 's':case 'strike':case 'del':{const t=inner();return t.trim()?'~~'+t+'~~':t;}
+      case 'code':return '`'+node.textContent+'`';
+      case 'a':return '['+inner()+']('+(node.getAttribute('href')||'')+')';
+      case 'img':return `![${node.alt||''}](${node.getAttribute('src')||''})`;
+      case 'br':return '  \n';
+      default:return inner();
+    }
+  }
+
+  /* ===== MARKDOWN -> HTML ===== */
+  function mdToHtml(md){
+    md=md.replace(/\r\n?/g,'\n');const lines=md.split('\n');let html='',i=0;
+    const inlineMd=s=>escapeHtml(s)
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img alt="$1" src="$2">')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>')
+      .replace(/`([^`]+)`/g,(m,c)=>'<code>'+c+'</code>')
+      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+      .replace(/__([^_]+)__/g,'<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>')
+      .replace(/(^|[^_])_([^_\n]+)_/g,'$1<em>$2</em>')
+      .replace(/~~([^~]+)~~/g,'<s>$1</s>');
+    while(i<lines.length){
+      let line=lines[i];
+      if(/^\s*$/.test(line)){i++;continue;}
+      let h=line.match(/^(#{1,6})\s+(.*)$/);
+      if(h){const n=h[1].length;html+=`<h${n}>${inlineMd(h[2].trim())}</h${n}>`;i++;continue;}
+      if(/^\s*([-*_])\s*(\1\s*){2,}$/.test(line)){html+='<hr>';i++;continue;}
+      if(/^\s*```/.test(line)){i++;let code=[];while(i<lines.length&&!/^\s*```/.test(lines[i])){code.push(lines[i]);i++;}i++;html+='<pre><code>'+escapeHtml(code.join('\n'))+'</code></pre>';continue;}
+      if(/^\s*>/.test(line)){let buf=[];while(i<lines.length&&/^\s*>/.test(lines[i])){buf.push(lines[i].replace(/^\s*>\s?/,''));i++;}html+='<blockquote>'+mdToHtml(buf.join('\n'))+'</blockquote>';continue;}
+      if(/^\s*\|.*\|\s*$/.test(line)&&i+1<lines.length&&/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i+1])&&lines[i+1].includes('-')){
+        const rows=[];while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){rows.push(lines[i]);i++;}
+        const parse=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+        const head=parse(rows[0]);let tb='<table><thead><tr>'+head.map(c=>'<th>'+inlineMd(c)+'</th>').join('')+'</tr></thead><tbody>';
+        rows.slice(2).forEach(r=>{tb+='<tr>'+parse(r).map(c=>'<td>'+inlineMd(c)+'</td>').join('')+'</tr>';});tb+='</tbody></table>';html+=tb;continue;
+      }
+      if(/^\s*([-*+]|\d+\.)\s+/.test(line)){const res=parseList(lines,i);html+=res.html;i=res.next;continue;}
+      let para=[line];i++;
+      while(i<lines.length&&!/^\s*$/.test(lines[i])&&!/^(#{1,6}\s|\s*```|\s*>|\s*([-*+]|\d+\.)\s|\s*\|)/.test(lines[i])&&!/^\s*([-*_])\s*(\1\s*){2,}$/.test(lines[i])){para.push(lines[i]);i++;}
+      html+='<p>'+inlineMd(para.join('\n')).replace(/\n/g,'<br>')+'</p>';
+    }
+    return html||'';
+    function parseList(lines,start){
+      function indentOf(s){const m=s.match(/^(\s*)/);return m[1].replace(/\t/g,'  ').length;}
+      function build(idx,baseIndent){
+        let ordered=/^\s*\d+\.\s/.test(lines[idx]),isTask=false,items=[];
+        while(idx<lines.length){
+          const ln=lines[idx];
+          if(/^\s*$/.test(ln)){if(idx+1<lines.length&&/^\s*([-*+]|\d+\.)\s+/.test(lines[idx+1])&&indentOf(lines[idx+1])>=baseIndent){idx++;continue;}break;}
+          if(!/^\s*([-*+]|\d+\.)\s+/.test(ln))break;
+          const ind=indentOf(ln);if(ind<baseIndent)break;
+          if(ind>baseIndent){const sub=build(idx,ind);if(items.length)items[items.length-1].children+=sub.html;idx=sub.next;continue;}
+          let m=ln.match(/^\s*(?:[-*+]|\d+\.)\s+(.*)$/),content=m[1],task=null;
+          const tm=content.match(/^\[([ xX])\]\s+(.*)$/);
+          if(tm){task=tm[1].toLowerCase()==='x';content=tm[2];isTask=true;}
+          items.push({content,task,children:''});idx++;
+        }
+        const realTag=ordered?'ol':'ul';let h='<'+realTag+(isTask?' class="task"':'')+'>';
+        items.forEach(it=>{let prefix='';if(it.task!==null)prefix=it.task?'☑ ':'☐ ';h+='<li>'+prefix+inlineMd(it.content)+it.children+'</li>';});
+        h+='</'+realTag+'>';return {html:h,next:idx};
+      }
+      return build(start,(lines[start].match(/^(\s*)/)[1]||'').replace(/\t/g,'  ').length);
+    }
+  }
+  function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  /* paste plain text */
+  editor.addEventListener('paste',e=>{
+    const md=(e.clipboardData||window.clipboardData).getData('text/plain');
+    const htmlData=(e.clipboardData||window.clipboardData).getData('text/html');
+    if(!htmlData&&md){e.preventDefault();document.execCommand('insertText',false,md);}
+  });
+  /* task checkbox toggle */
+  editor.addEventListener('click',e=>{
+    const li=e.target.closest('ul.task > li');if(!li)return;
+    const first=li.firstChild;
+    if(first&&first.nodeType===3&&/^[☐☑✓]/.test(first.textContent)){
+      first.textContent=first.textContent.replace(/^☑|^✓/,'§T§').replace(/^☐/,'☑').replace(/^§T§/,'☐');sync();
+    }
+  });
+
+  restore();updateActive();editor.focus();
+})();
+</script>
+</body>
+</html>
