@@ -1,6 +1,5 @@
 #!/bin/bash
 # Double-click to open helloword in its own chromeless app window (macOS).
-# Serves over http://localhost to avoid file:// permission denials.
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT=8137
 PROFILE="$HOME/Library/Application Support/helloword"
@@ -20,8 +19,11 @@ CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 [ -x "$CHROME" ] || CHROME="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 
 if curl -s -o /dev/null "$URL" && [ -x "$CHROME" ]; then
-  "$CHROME" --app="$URL" --user-data-dir="$PROFILE" \
-            --no-first-run --no-default-browser-check --window-size=1100,820 &
+  nohup "$CHROME" --app="$URL" --user-data-dir="$PROFILE" \
+        --no-first-run --no-default-browser-check --window-size=1100,820 \
+        >/dev/null 2>&1 &
+  disown 2>/dev/null
 else
   open "$URL" 2>/dev/null || open "file://$DIR/index.html"
 fi
+exit 0

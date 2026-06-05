@@ -1,15 +1,16 @@
 #!/bin/bash
-# helloword launcher — serves the app over http://localhost (avoids file:// TCC
-# denials on protected folders like Desktop/Documents) and opens it in a
-# standalone, chromeless Chrome/Edge/Brave "app mode" window.
+# helloword launcher. Serves the app over http://localhost (avoids file:// TCC
+# denials) and opens it in a standalone chromeless Chrome/Edge/Brave window.
+# IMPORTANT: launches the browser as a background child and exits cleanly — it
+# must NOT exec into the browser, or the Dock icon bounces forever.
 
-BUNDLE="$(cd "$(dirname "$0")/../../.." && pwd)"   # folder containing helloword.app
+BUNDLE="$(cd "$(dirname "$0")/../../.." && pwd)"
 PORT=8137
 PROFILE="$HOME/Library/Application Support/helloword"
 mkdir -p "$PROFILE"
 URL="http://localhost:$PORT/index.html"
 
-# Start a tiny static server if one isn't already serving the app
+# Start the static server if it isn't already up
 if ! curl -s -o /dev/null "$URL"; then
   PY="$(command -v python3 || command -v python)"
   if [ -n "$PY" ]; then
@@ -18,15 +19,16 @@ if ! curl -s -o /dev/null "$URL"; then
   fi
 fi
 
-# Pick a Chromium-based browser for the chromeless window
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 [ -x "$CHROME" ] || CHROME="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
 [ -x "$CHROME" ] || CHROME="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 
 if curl -s -o /dev/null "$URL" && [ -x "$CHROME" ]; then
-  exec "$CHROME" --app="$URL" --user-data-dir="$PROFILE" \
-       --no-first-run --no-default-browser-check --window-size=1100,820
+  nohup "$CHROME" --app="$URL" --user-data-dir="$PROFILE" \
+        --no-first-run --no-default-browser-check --window-size=1100,820 \
+        >/dev/null 2>&1 &
+  disown 2>/dev/null
 else
-  # Fallbacks: localhost in default browser, else the raw file
   open "$URL" 2>/dev/null || open "file://$BUNDLE/index.html"
 fi
+exit 0
