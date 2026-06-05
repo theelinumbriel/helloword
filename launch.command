@@ -9,7 +9,7 @@ URL="http://localhost:$PORT/index.html"
 if ! curl -s -o /dev/null "$URL"; then
   PY="$(command -v python3 || command -v python)"
   if [ -n "$PY" ]; then
-    ( cd "$DIR" && nohup "$PY" -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 & )
+    ( cd "$DIR" && PORT="$PORT" HELLOWORD_NOOPEN=1 nohup "$PY" serve.py >/dev/null 2>&1 & )
     for i in $(seq 1 25); do curl -s -o /dev/null "$URL" && break; sleep 0.2; done
   fi
 fi
