@@ -37,7 +37,33 @@ open index.html       # macOS
 # start index.html    # Windows
 ```
 
-### Option 2 — serve it on localhost
+### Option 2 — run it as its own app window (no browser chrome)
+
+Open HelloWord in a standalone, chromeless window — no tabs, no address bar,
+its own Dock/taskbar icon. Requires a Chromium browser (Chrome, Edge, or Brave).
+
+**macOS** — double-click **`HelloWord.app`**, or:
+
+```bash
+./launch.command
+```
+
+(First launch: right-click `HelloWord.app` → **Open** → **Open** to get past
+Gatekeeper, since the bundle isn't code-signed.)
+
+**Windows** — create a shortcut with this target (adjust the path):
+
+```bat
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --app="file:///C:/path/to/md_editor/index.html"
+```
+
+**Linux**:
+
+```bash
+google-chrome --app="file://$PWD/index.html"   # or: chromium / microsoft-edge
+```
+
+### Option 3 — serve it on localhost
 
 Some browsers are slightly happier serving files over `http://` than `file://`.
 If you have Python installed:
