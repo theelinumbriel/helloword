@@ -208,6 +208,20 @@
   .filemenu .ic{width:18px;text-align:center}
   .filemenu hr{border:none;border-top:1px solid #eee;margin:4px 0}
   .hidden{display:none}
+  /* ============ FIND & REPLACE DIALOG ============ */
+  .find-dialog{position:fixed;top:120px;right:24px;z-index:80;background:#fff;border:1px solid #c9c9c9;box-shadow:0 6px 20px rgba(0,0,0,.22);border-radius:4px;padding:8px;width:300px;font-family:var(--ui-font)}
+  .find-dialog .fd-row{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+  .find-dialog .fd-input{flex:1;height:24px;border:1px solid #bcbcbc;border-radius:2px;padding:0 6px;font-size:13px;font-family:var(--ui-font)}
+  .find-dialog .fd-count{font-size:11px;color:#666;min-width:46px;text-align:right}
+  .find-dialog .fd-nav,.find-dialog .fd-close{width:24px;height:24px;border:1px solid transparent;background:transparent;border-radius:2px;cursor:pointer;font-size:12px}
+  .find-dialog .fd-nav:hover,.find-dialog .fd-close:hover{background:#e6e6e6}
+  .find-dialog .fd-btn{height:24px;padding:0 10px;border:1px solid #bcbcbc;background:#fff;border-radius:2px;cursor:pointer;font-size:12px;font-family:var(--ui-font)}
+  .find-dialog .fd-btn:hover{background:var(--word-blue-light)}
+  .find-dialog .fd-case{font-size:12px;color:#444;display:flex;align-items:center;gap:5px}
+  .find-dialog.find-only #replaceRow{display:none}
+  ::highlight(hw-find){background:#ffe27a}
+  ::highlight(hw-find-current){background:#ff9632;color:#000}
+
   @media print{
     html,body{height:auto;overflow:visible;background:#fff}
     .title-bar,.ribbon-tabs,.ribbon,.ruler,.status-bar,.filemenu,.listlib,#fileMenu,#modeMenu{display:none !important}
@@ -459,6 +473,23 @@
 
   <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" class="hidden">
 
+  <!-- FIND & REPLACE DIALOG -->
+  <div class="find-dialog hidden" id="findDialog">
+    <div class="fd-row">
+      <input type="text" id="findInput" placeholder="Find" class="fd-input" spellcheck="false">
+      <span class="fd-count" id="findCount"></span>
+      <button class="fd-nav" id="findPrev" title="Previous">▲</button>
+      <button class="fd-nav" id="findNext" title="Next">▼</button>
+      <button class="fd-close" id="findClose" title="Close (Esc)">✕</button>
+    </div>
+    <div class="fd-row" id="replaceRow">
+      <input type="text" id="replaceInput" placeholder="Replace" class="fd-input" spellcheck="false">
+      <button class="fd-btn" id="replaceOne">Replace</button>
+      <button class="fd-btn" id="replaceAll">Replace All</button>
+    </div>
+    <label class="fd-case"><input type="checkbox" id="findCase"> Match case</label>
+  </div>
+
 <script>
 (function(){
   "use strict";
@@ -566,7 +597,7 @@
       case 'shrink': nudgeFont(-1); break;
       case 'highlight': applyHighlight(lastHighlight); break;
       case 'fontcolor': applyFontColor(lastFontColor); break;
-      case 'find': { const q=prompt('Find:'); if(q&&window.find)window.find(q); break; }
+      case 'find': openFind(false); break;
       case 'selectall': document.execCommand('selectAll'); break;
       case 'zoomin': setZoom(zoom+10); break;
       case 'zoomout': setZoom(zoom-10); break;
@@ -611,6 +642,8 @@
     }
     if(k==='s'){e.preventDefault();saveMarkdown(e.shiftKey);}
     else if(k==='k'){e.preventDefault();handleCmd('link');}
+    else if(k==='f'){e.preventDefault();openFind(false);}
+    else if(k==='h'){e.preventDefault();openFind(true);}
     else if(['b','i','u'].includes(k)){setTimeout(updateActive,0);}
   });
 
@@ -1133,11 +1166,150 @@
     }
   });
 
+  /* ============ FIND & REPLACE ============ */
+  const findDialog=document.getElementById('findDialog');
+  const findInput=document.getElementById('findInput');
+  const findCount=document.getElementById('findCount');
+  const findPrev=document.getElementById('findPrev');
+  const findNext=document.getElementById('findNext');
+  const findClose=document.getElementById('findClose');
+  const replaceInput=document.getElementById('replaceInput');
+  const replaceOneBtn=document.getElementById('replaceOne');
+  const replaceAllBtn=document.getElementById('replaceAll');
+  const findCase=document.getElementById('findCase');
+
+  let findRanges=[], findIdx=-1;
+
+  function findMatches(text, query, matchCase){
+    const out=[]; if(!query) return out;
+    const hay = matchCase?text:text.toLowerCase();
+    const needle = matchCase?query:query.toLowerCase();
+    let i=0; while((i=hay.indexOf(needle,i))!==-1){ out.push(i); i+=needle.length; }
+    return out;
+  }
+
+  function buildRangesPerTextNode(q, mc){
+    const ranges=[];
+    if(!q) return ranges;
+    const walker=document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while((node=walker.nextNode())){
+      const positions=findMatches(node.textContent, q, mc);
+      positions.forEach(i=>{
+        const r=document.createRange();
+        r.setStart(node, i);
+        r.setEnd(node, i+q.length);
+        ranges.push(r);
+      });
+    }
+    return ranges;
+  }
+
+  function renderHighlights(){
+    if(!('highlights' in CSS)) return;
+    CSS.highlights.delete('hw-find');
+    CSS.highlights.delete('hw-find-current');
+    if(!findRanges.length) return;
+    const others=findRanges.filter((_,i)=>i!==findIdx);
+    if(others.length) CSS.highlights.set('hw-find', new Highlight(...others));
+    if(findIdx>=0 && findRanges[findIdx]) CSS.highlights.set('hw-find-current', new Highlight(findRanges[findIdx]));
+  }
+
+  function updateFindCount(){
+    findCount.textContent = findRanges.length? (findIdx+1)+' of '+findRanges.length : (findInput.value?'0 of 0':'');
+  }
+
+  function scrollToCurrent(){
+    if(findIdx<0) return;
+    const r=findRanges[findIdx];
+    const el=r.startContainer.parentElement;
+    if(el&&el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'smooth'});
+  }
+
+  function clearFind(){
+    findRanges=[]; findIdx=-1;
+    if('highlights' in CSS){ CSS.highlights.delete('hw-find'); CSS.highlights.delete('hw-find-current'); }
+  }
+
+  function runFind(){
+    const q=findInput.value;
+    const mc=findCase.checked;
+    findRanges=buildRangesPerTextNode(q, mc);
+    findIdx=findRanges.length?0:-1;
+    updateFindCount();
+    renderHighlights();
+    scrollToCurrent();
+  }
+
+  function step(dir){
+    if(!findRanges.length) return;
+    findIdx=(findIdx+dir+findRanges.length)%findRanges.length;
+    updateFindCount();
+    renderHighlights();
+    scrollToCurrent();
+  }
+
+  function replaceCurrent(){
+    if(findIdx<0||!findRanges[findIdx]) return;
+    const r=findRanges[findIdx];
+    r.deleteContents();
+    r.insertNode(document.createTextNode(replaceInput.value));
+    sync();
+    runFind();
+  }
+
+  function replaceAllMatches(){
+    const q=findInput.value; if(!q) return;
+    const mc=findCase.checked;
+    let n=0;
+    let ranges=buildRangesPerTextNode(q,mc);
+    while(ranges.length){
+      const r=ranges[0];
+      r.deleteContents();
+      r.insertNode(document.createTextNode(replaceInput.value));
+      n++;
+      ranges=buildRangesPerTextNode(q,mc);
+      if(n>5000) break;
+    }
+    sync();
+    runFind();
+  }
+
+  function openFind(showReplace){
+    findDialog.classList.remove('hidden');
+    findDialog.classList.toggle('find-only', !showReplace);
+    const sel=window.getSelection().toString();
+    if(sel) findInput.value=sel;
+    findInput.focus();
+    findInput.select();
+    runFind();
+  }
+
+  function closeFind(){
+    findDialog.classList.add('hidden');
+    clearFind();
+    editor.focus();
+  }
+
+  findDialog.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();closeFind();}
+    else if(e.key==='Enter'){e.preventDefault();step(e.shiftKey?-1:1);}
+  });
+
+  findInput.addEventListener('input', runFind);
+  findCase.addEventListener('change', runFind);
+  findNext.addEventListener('click', ()=>step(1));
+  findPrev.addEventListener('click', ()=>step(-1));
+  findClose.addEventListener('click', closeFind);
+  replaceOneBtn.addEventListener('click', replaceCurrent);
+  replaceAllBtn.addEventListener('click', replaceAllMatches);
+
   renderMode();
   loadSettings();
   restore();ensureBlock();updateActive();editor.focus();
   renderDateCheck();
   window.HW = {
+    findMatches: findMatches,
     checksum: hwChecksum,
     b64encode: hwB64Encode,
     b64decode: hwB64Decode,
