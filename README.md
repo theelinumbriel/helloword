@@ -89,6 +89,23 @@ Notion — and it just works.
 Your in-progress document is also autosaved in your browser's local storage, so
 closing the tab won't lose anything. Use **🗎 New** to start fresh.
 
+### Enriched vs Basic mode
+
+helloword saves in one of two modes, switchable from the **Mode** control in the
+status bar:
+
+- **Enriched** (the default): the file is clean Markdown plus a single invisible
+  HTML comment at the end that stores exact formatting (font, size, color,
+  highlight, alignment, and more). Markdown renderers ignore HTML comments, so the
+  file still looks like plain Markdown on GitHub, Obsidian, VS Code, and so on, but
+  reopening it in helloword restores the formatting exactly.
+- **Basic**: pure Markdown with no hidden data. Formatting that Markdown cannot
+  express is not saved.
+
+If you edit an Enriched file's text in another app, helloword detects this on
+reopen (via a checksum) and opens it as Basic, so it never restores stale content
+over your changes.
+
 ## Browser support
 
 Works in any modern browser (Chrome, Edge, Firefox, Safari). Everything runs
