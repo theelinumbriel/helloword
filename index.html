@@ -957,8 +957,9 @@
   const HW_MARK_SUFFIX = " -->";
   function composeFileText(cleanMd, html, name, mode){
     if(mode!=="enriched") return cleanMd;
-    const payload = JSON.stringify({ v:1, html: html, srcChecksum: hwChecksum(cleanMd), name: name||"" });
-    return cleanMd + "\n\n" + HW_MARK_PREFIX + hwB64Encode(payload) + HW_MARK_SUFFIX + "\n";
+    const body = cleanMd.replace(/\s+$/,"");          // canonical form: matches what parseFileText extracts
+    const payload = JSON.stringify({ v:1, html: html, srcChecksum: hwChecksum(body), name: name||"" });
+    return body + "\n\n" + HW_MARK_PREFIX + hwB64Encode(payload) + HW_MARK_SUFFIX + "\n";
   }
 
   const HW_PAYLOAD_RE = /\n*<!--\s*helloword:v1\s+([A-Za-z0-9+/=]+)\s*-->\s*$/;
