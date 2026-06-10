@@ -781,10 +781,14 @@
     r.readAsText(file);fileInput.value='';
   });
   function loadText(text,fileName){
-    editor.innerHTML=mdToHtml(text);
+    const parsed = parseFileText(text);
+    if(parsed.html!==null){ editor.innerHTML = parsed.html; }
+    else { editor.innerHTML = mdToHtml(parsed.cleanMd); }
+    setMode(parsed.mode, true);
     docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
     document.title=docName.textContent+' - helloword';
     editor.focus();ensureBlock();sync();
+    if(parsed.stale){ saveStat.textContent='External edits detected, opened as Basic'; }
   }
 
   /* Date/time helpers — YYYYMMDD + HHMMSS + tz offset (filename-safe) */
@@ -1033,7 +1037,8 @@
     parseFileText: parseFileText,
     getMode: ()=>docMode,
     setMode: setMode,
-    composeCurrentFileText: composeCurrentFileText
+    composeCurrentFileText: composeCurrentFileText,
+    loadText: loadText
   };
 })();
 </script>
