@@ -222,6 +222,14 @@
   ::highlight(hw-find){background:#ffe27a}
   ::highlight(hw-find-current){background:#ff9632;color:#000}
 
+  .page .hw-toc{border:1px solid #d9d9d9;background:#fafafa;border-radius:4px;padding:10px 14px;margin:0 0 10pt;user-select:none}
+  .page .hw-toc-head{font-weight:700;color:#2e74b5;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .page .hw-toc-upd{font-size:10px;font-weight:400;border:1px solid #ccc;background:#fff;border-radius:3px;padding:1px 6px;cursor:pointer}
+  .page .hw-toc-list{list-style:none;margin:0;padding:0}
+  .page .hw-toc-list li{margin:2px 0}
+  .page .hw-toc a{color:#0563c1;text-decoration:none}
+  .page .hw-toc a:hover{text-decoration:underline}
+
   .img-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px}
   .img-bar button{font-size:11px;padding:3px 7px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
   .img-bar button:hover{background:var(--word-blue-light)}
@@ -408,6 +416,7 @@
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="image"><span class="ic">🖼️</span><span class="cap">Pictures</span></button></div><div class="rgroup-label">Illustrations</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="link"><span class="ic">🔗</span><span class="cap">Link</span></button><button class="big" data-cmd="hr"><span class="ic">―</span><span class="cap">H. Line</span></button></div><div class="rgroup-label">Links</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="codeblock"><span class="ic">&lt;/&gt;</span><span class="cap">Code Block</span></button><button class="big" data-cmd="quote"><span class="ic">❝</span><span class="cap">Quote</span></button></div><div class="rgroup-label">Blocks</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button></div><div class="rgroup-label">Reference</div></div>
     </div>
 
     <!-- VIEW -->
@@ -659,6 +668,27 @@
     sync();
   }
 
+  /* ===== TABLE OF CONTENTS ===== */
+  function slugify(s){ return (s||'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').slice(0,60) || 'section'; }
+  function collectHeadings(){
+    const hs=[...editor.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(h=>!h.closest('.hw-toc'));
+    const seen={};
+    return hs.map(h=>{ let id=h.id; if(!id){ id=slugify(h.textContent); if(seen[id]){ id=id+'-'+(++seen[id]); } else seen[id]=1; h.id=id; } return {level:+h.tagName[1], text:h.textContent.trim(), id:id}; });
+  }
+  function buildTocHtml(){
+    const items=collectHeadings();
+    let inner='<div class="hw-toc-head" contenteditable="false">Contents <button class="hw-toc-upd" contenteditable="false">Update</button></div><ul class="hw-toc-list">';
+    items.forEach(it=>{ inner+='<li style="margin-left:'+((it.level-1)*16)+'px"><a href="#'+it.id+'">'+it.text.replace(/</g,'&lt;')+'</a></li>'; });
+    inner+='</ul>';
+    return inner;
+  }
+  function insertOrUpdateToc(){
+    let nav=editor.querySelector('nav.hw-toc');
+    if(!nav){ document.execCommand('insertHTML',false,'<nav class="hw-toc" contenteditable="false"></nav><p><br></p>'); nav=editor.querySelector('nav.hw-toc'); }
+    if(nav){ nav.innerHTML=buildTocHtml(); }
+    sync();
+  }
+
   /* COMMAND DISPATCH */
   function handleCmd(cmd){
     if(!cmd)return;
@@ -691,6 +721,7 @@
       case 'zoomreset': setZoom(100); break;
       case 'linespacing': cycleLineSpacing(); break;
       case 'toggledate': stampDate=!stampDate; saveSettings(); renderDateCheck(); break;
+      case 'toc': insertOrUpdateToc(); break;
     }
     sync();
   }
@@ -1111,6 +1142,10 @@
     parent.childNodes.forEach(node=>{
       if(node.nodeType===3){const t=node.textContent.trim();if(t)out.push(indent+inline(node).trim(),'');return;}
       if(node.nodeType!==1)return;
+      if(node.classList && node.classList.contains('hw-toc')){
+        node.querySelectorAll('.hw-toc-list li').forEach(li=>{ const a=li.querySelector('a'); if(a){ const indent2=' '.repeat(Math.max(0,parseInt(li.style.marginLeft)||0)/16*2); out.push(indent+indent2+'- ['+a.textContent+'](#'+(a.getAttribute('href')||'').replace(/^#/,'')+')'); } });
+        out.push(''); return;
+      }
       const tag=node.tagName.toLowerCase();
       switch(tag){
         case 'h1':out.push(indent+'# '+inline(node).trim(),'');break;
@@ -1285,6 +1320,13 @@
     const htmlData=(e.clipboardData||window.clipboardData).getData('text/html');
     if(!htmlData&&md){e.preventDefault();document.execCommand('insertText',false,md);}
   });
+  /* TOC: Update button + anchor links */
+  editor.addEventListener('click',e=>{
+    if(e.target.classList.contains('hw-toc-upd')){ e.preventDefault(); insertOrUpdateToc(); return; }
+    const a=e.target.closest('.hw-toc a');
+    if(a){ e.preventDefault(); const href=a.getAttribute('href')||''; const id=href.replace(/^#/,''); const target=document.getElementById(id); if(target) target.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+  });
+
   /* task checkbox toggle */
   editor.addEventListener('click',e=>{
     const li=e.target.closest('ul.task > li');if(!li)return;
@@ -1579,7 +1621,9 @@
     tableInsertCol: insertCol,
     tableDeleteRow: deleteRow,
     tableDeleteCol: deleteCol,
-    tableDeleteTable: deleteTable
+    tableDeleteTable: deleteTable,
+    slugify: slugify,
+    collectHeadings: collectHeadings
   };
 })();
 </script>
