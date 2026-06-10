@@ -115,6 +115,11 @@
   .listlib .tile.num{font-size:9px;line-height:1.3}
   .listlib .tile.none{font-size:10px;color:#888}
   .listlib .tile:hover{border-color:var(--word-blue);background:var(--word-blue-light)}
+  .listlib .swgrid{display:grid;grid-template-columns:repeat(10,18px);gap:3px}
+  .listlib .sw{width:18px;height:18px;border:1px solid #c9c9c9;border-radius:2px;cursor:pointer;padding:0}
+  .listlib .sw:hover{outline:2px solid var(--word-blue);outline-offset:-1px}
+  .listlib .swmore{margin-top:8px;width:100%;font-size:12px;padding:4px;border:1px solid #d8d8d8;background:#fff;border-radius:2px;cursor:pointer;font-family:var(--ui-font)}
+  .listlib .swmore:hover{background:var(--word-blue-light)}
 
   select.combo,input.combo{height:22px;border:1px solid #bcbcbc;background:#fff;border-radius:2px;font-size:12px;padding:0 4px;color:#222;font-family:var(--ui-font)}
   select.fontname{width:118px}
@@ -273,8 +278,14 @@
               <button class="sm" data-exec="subscript" title="Subscript">x₂</button>
               <button class="sm" data-exec="superscript" title="Superscript">x²</button>
               <button class="sm" data-cmd="inlineCode" title="Inline code">&lt;/&gt;</button>
-              <button class="sm ftcolor" data-cmd="highlight" title="Text Highlight Color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14.3 5.2 18.8 9.7l-7.7 7.7-4.5-4.5z"/><path d="M6.6 12.9 4.4 17.4l2.6.9 1.7-1.4z" fill="currentColor" stroke="none"/></svg><span class="bar" style="background:#ffd400"></span></button>
-              <button class="sm ftcolor" data-cmd="fontcolor" title="Font Color"><span class="gl">A</span><span class="bar" style="background:#c00000"></span></button>
+              <span class="split-btn">
+                <button class="sm ftcolor splitmain" data-cmd="highlight" title="Text Highlight Color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M14.3 5.2 18.8 9.7l-7.7 7.7-4.5-4.5z"/><path d="M6.6 12.9 4.4 17.4l2.6.9 1.7-1.4z" fill="currentColor" stroke="none"/></svg><span class="bar" id="hlBar" style="background:#ffff00"></span></button>
+                <button class="sm splitcaret" data-cmd="hlpalette" title="Highlight colors">▼</button>
+              </span>
+              <span class="split-btn">
+                <button class="sm ftcolor splitmain" data-cmd="fontcolor" title="Font Color"><span class="gl">A</span><span class="bar" id="fcBar" style="background:#c00000"></span></button>
+                <button class="sm splitcaret" data-cmd="fcpalette" title="Font colors">▼</button>
+              </span>
             </div>
           </div>
         </div>
@@ -409,6 +420,22 @@
     </div>
   </div>
 
+  <!-- HIGHLIGHT PALETTE -->
+  <div class="listlib hidden" id="hlPalette">
+    <div class="llhead">Highlight Color</div>
+    <div class="swgrid"></div>
+    <button class="swmore" data-more="hl">More colors…</button>
+  </div>
+
+  <!-- FONT COLOR PALETTE -->
+  <div class="listlib hidden" id="fcPalette">
+    <div class="llhead">Font Color</div>
+    <div class="swgrid"></div>
+    <button class="swmore" data-more="fc">More colors…</button>
+  </div>
+
+  <input type="color" id="moreColor" class="hidden">
+
   <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" class="hidden">
 
 <script>
@@ -422,6 +449,7 @@
   const modeToggle=document.getElementById('modeToggle');
   const modeMenu=document.getElementById('modeMenu');
   let docMode='enriched';
+  let lastHighlight='#ffff00', lastFontColor='#c00000';
   const STORAGE='wordlike.doc.v2';
   const SETTINGS='wordlike.settings.v1';
   let stampDate=false;
@@ -460,6 +488,7 @@
     const b=e.target.closest('button,.style-card'); if(!b)return;
     if(b.classList.contains('style-card')){ applyStyle(b.dataset.style); return; }
     if(b.dataset.cmd==='bulletlib'||b.dataset.cmd==='numberlib'){ openListLib(b.dataset.cmd,b); return; }
+    if(b.dataset.cmd==='hlpalette'||b.dataset.cmd==='fcpalette'){ openPalette(b.dataset.cmd,b); return; }
     if(b.dataset.exec){ editor.focus(); document.execCommand(b.dataset.exec,false,null); sync(); return; }
     if(b.dataset.cmd) handleCmd(b.dataset.cmd);
   });
@@ -514,8 +543,8 @@
       case 'link': { const u=prompt('Link URL:','https://'); if(u)document.execCommand('createLink',false,u); break; }
       case 'grow': nudgeFont(1); break;
       case 'shrink': nudgeFont(-1); break;
-      case 'highlight': document.execCommand('hiliteColor',false,'#ffff00'); break;
-      case 'fontcolor': document.execCommand('foreColor',false,'#c00000'); break;
+      case 'highlight': applyHighlight(lastHighlight); break;
+      case 'fontcolor': applyFontColor(lastFontColor); break;
       case 'find': { const q=prompt('Find:'); if(q&&window.find)window.find(q); break; }
       case 'selectall': document.execCommand('selectAll'); break;
       case 'zoomin': setZoom(zoom+10); break;
@@ -707,10 +736,64 @@
   bulletLib.addEventListener('click',e=>{const t=e.target.closest('[data-style]');if(!t)return;applyListStyle('ul',t.dataset.style);bulletLib.classList.add('hidden');});
   numberLib.addEventListener('click',e=>{const t=e.target.closest('[data-style]');if(!t)return;applyListStyle('ol',t.dataset.style);numberLib.classList.add('hidden');});
   document.addEventListener('click',e=>{
-    if(!e.target.closest('.listlib')&&!e.target.closest('[data-cmd="bulletlib"]')&&!e.target.closest('[data-cmd="numberlib"]')){
+    if(!e.target.closest('.listlib')&&!e.target.closest('[data-cmd="bulletlib"]')&&!e.target.closest('[data-cmd="numberlib"]')&&!e.target.closest('[data-cmd="hlpalette"]')&&!e.target.closest('[data-cmd="fcpalette"]')){
       bulletLib.classList.add('hidden');numberLib.classList.add('hidden');
+      hlPalette.classList.add('hidden');fcPalette.classList.add('hidden');
     }
   });
+
+  /* ===== COLOR PICKERS (Highlight + Font Color) ===== */
+  const hlPalette=document.getElementById('hlPalette');
+  const fcPalette=document.getElementById('fcPalette');
+  const moreColorInput=document.getElementById('moreColor');
+  let moreColorTarget=null;
+
+  const SWATCH_COLORS=[
+    '#c00000','#ff0000','#ffc000','#ffff00','#92d050','#00b050','#00b0f0','#0070c0','#002060','#7030a0',
+    '#000000','#404040','#595959','#808080','#a6a6a6','#bfbfbf','#d9d9d9','#f2f2f2','#ffffff','#ffd966'
+  ];
+
+  function buildSwGrid(paletteEl, applyFn){
+    const grid=paletteEl.querySelector('.swgrid');
+    SWATCH_COLORS.forEach(c=>{
+      const btn=document.createElement('button');
+      btn.className='sw';
+      btn.dataset.color=c;
+      btn.style.background=c;
+      btn.title=c;
+      grid.appendChild(btn);
+    });
+    grid.addEventListener('click',e=>{
+      const sw=e.target.closest('.sw');if(!sw)return;
+      applyFn(sw.dataset.color);
+      paletteEl.classList.add('hidden');
+    });
+  }
+  buildSwGrid(hlPalette, c=>applyHighlight(c));
+  buildSwGrid(fcPalette, c=>applyFontColor(c));
+
+  hlPalette.querySelector('.swmore').addEventListener('click',()=>{ moreColorTarget='hl'; moreColorInput.value=lastHighlight; moreColorInput.click(); hlPalette.classList.add('hidden'); });
+  fcPalette.querySelector('.swmore').addEventListener('click',()=>{ moreColorTarget='fc'; moreColorInput.value=lastFontColor; moreColorInput.click(); fcPalette.classList.add('hidden'); });
+  moreColorInput.addEventListener('change',()=>{
+    if(moreColorTarget==='hl') applyHighlight(moreColorInput.value);
+    else if(moreColorTarget==='fc') applyFontColor(moreColorInput.value);
+  });
+
+  function openPalette(which,btn){
+    const pal=which==='hlpalette'?hlPalette:fcPalette;
+    const other=which==='hlpalette'?fcPalette:hlPalette;
+    other.classList.add('hidden');
+    if(!pal.classList.contains('hidden')){pal.classList.add('hidden');return;}
+    const r=btn.getBoundingClientRect();
+    pal.classList.remove('hidden');
+    const w=pal.offsetWidth;
+    let left=r.left; if(left+w>window.innerWidth-8) left=window.innerWidth-8-w;
+    pal.style.left=Math.max(8,left)+'px';
+    pal.style.top=(r.bottom+2)+'px';
+  }
+
+  function applyHighlight(c){ editor.focus(); document.execCommand('hiliteColor',false,c); lastHighlight=c; document.getElementById('hlBar').style.background=c; sync(); }
+  function applyFontColor(c){ editor.focus(); document.execCommand('foreColor',false,c); lastFontColor=c; document.getElementById('fcBar').style.background=c; sync(); }
 
   /* ACTIVE STATE + COUNTS */
   function updateActive(){
@@ -1045,7 +1128,9 @@
     loadText: loadText,
     flushAutosave: flushAutosave,
     stampedName: ()=>stampedName(),
-    setStampDate: (v)=>{stampDate=!!v;}
+    setStampDate: (v)=>{stampDate=!!v;},
+    applyFontColor: applyFontColor,
+    getLastFontColor: ()=>lastFontColor
   };
 })();
 </script>
