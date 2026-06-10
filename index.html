@@ -237,6 +237,12 @@
   .page .hw-fn{margin:2pt 0}
   .page .hw-fn-back{margin-left:6px;text-decoration:none;color:#0563c1}
 
+  .page .hw-cite{color:#1f3864}
+  .page .hw-bibliography{margin-top:14pt}
+  .page .hw-bib-head{font-size:13pt;font-weight:600;color:#2e74b5;margin:0 0 6pt}
+  .page .hw-bib-list{padding-left:.3in;margin:0}
+  .page .hw-bib-list li{margin:3pt 0}
+
   .img-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px}
   .img-bar button{font-size:11px;padding:3px 7px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
   .img-bar button:hover{background:var(--word-blue-light)}
@@ -423,7 +429,7 @@
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="image"><span class="ic">🖼️</span><span class="cap">Pictures</span></button></div><div class="rgroup-label">Illustrations</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="link"><span class="ic">🔗</span><span class="cap">Link</span></button><button class="big" data-cmd="hr"><span class="ic">―</span><span class="cap">H. Line</span></button></div><div class="rgroup-label">Links</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="codeblock"><span class="ic">&lt;/&gt;</span><span class="cap">Code Block</span></button><button class="big" data-cmd="quote"><span class="ic">❝</span><span class="cap">Quote</span></button></div><div class="rgroup-label">Blocks</div></div>
-      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button><button class="big" data-cmd="footnote"><span class="ic">›¹</span><span class="cap">Footnote</span></button></div><div class="rgroup-label">Reference</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button><button class="big" data-cmd="footnote"><span class="ic">›¹</span><span class="cap">Footnote</span></button><button class="big" data-cmd="citation"><span class="ic">" "</span><span class="cap">Citation</span></button><button class="big" data-cmd="bibliography"><span class="ic">📚</span><span class="cap">Bibliography</span></button></div><div class="rgroup-label">Reference</div></div>
     </div>
 
     <!-- VIEW -->
@@ -785,7 +791,87 @@
     if(editor.querySelector('sup.hw-fnref')||editor.querySelector('section.hw-footnotes')){
       renumberFootnotes();
     }
+    if(editor.querySelector('section.hw-bibliography')){
+      updateBibliography();
+    }
   });
+
+  /* ===== CITATIONS + BIBLIOGRAPHY ===== */
+  function collectSources(){
+    const map={};
+    editor.querySelectorAll('span.hw-cite').forEach(c=>{
+      const a=c.getAttribute('data-author')||'', t=c.getAttribute('data-title')||'', y=c.getAttribute('data-year')||'';
+      const key=(a+'|'+t+'|'+y).toLowerCase();
+      if(!map[key]) map[key]={author:a,title:t,year:y};
+    });
+    return Object.values(map).sort((p,q)=>(p.author||'').toLowerCase().localeCompare((q.author||'').toLowerCase()));
+  }
+  function bibLine(s){ return [s.author, s.title, s.year].filter(Boolean).map(x=>String(x).trim()).join('. ') + (s.author||s.title||s.year?'.':''); }
+  function insertCitation(){
+    const author=prompt('Author (e.g. Smith):')||''; if(author===null) return;
+    const title=prompt('Title (optional):')||'';
+    const year=prompt('Year (e.g. 2020):')||'';
+    const label='('+[author, year].filter(Boolean).join(', ')+')';
+    const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const html='<span class="hw-cite" contenteditable="false" data-author="'+esc(author)+'" data-title="'+esc(title)+'" data-year="'+esc(year)+'">'+esc(label)+'</span>&nbsp;';
+    document.execCommand('insertHTML',false,html);
+    // Fallback if execCommand didn't insert (headless Chrome)
+    if(!editor.querySelector('span.hw-cite[data-author="'+author.replace(/"/g,'\\"')+'"]')){
+      const sel=getSelection();
+      if(sel&&sel.rangeCount){
+        const range=sel.getRangeAt(0);
+        range.deleteContents();
+        const tmp=document.createElement('div');
+        tmp.innerHTML=html;
+        const frag=document.createDocumentFragment();
+        let child;
+        while((child=tmp.firstChild)) frag.appendChild(child);
+        range.insertNode(frag);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        const tmp=document.createElement('div');
+        tmp.innerHTML=html;
+        while(tmp.firstChild) editor.appendChild(tmp.firstChild);
+      }
+    }
+    updateBibliography(); sync();
+  }
+  function updateBibliography(){
+    const sec=editor.querySelector('section.hw-bibliography'); if(!sec) return;
+    const ul=sec.querySelector('.hw-bib-list'); if(!ul) return;
+    ul.innerHTML=''; collectSources().forEach(s=>{ const li=document.createElement('li'); li.textContent=bibLine(s); ul.appendChild(li); });
+  }
+  function insertBibliography(){
+    let sec=editor.querySelector('section.hw-bibliography');
+    if(!sec){
+      const html='<section class="hw-bibliography" contenteditable="false"><h2 class="hw-bib-head">References</h2><ul class="hw-bib-list"></ul></section><p><br></p>';
+      document.execCommand('insertHTML',false,html);
+      sec=editor.querySelector('section.hw-bibliography');
+      // Fallback if execCommand didn't insert (headless Chrome)
+      if(!sec){
+        const sel=getSelection();
+        const tmp=document.createElement('div');
+        tmp.innerHTML=html;
+        const frag=document.createDocumentFragment();
+        let child;
+        while((child=tmp.firstChild)) frag.appendChild(child);
+        if(sel&&sel.rangeCount){
+          const range=sel.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(frag);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          editor.appendChild(frag);
+        }
+        sec=editor.querySelector('section.hw-bibliography');
+      }
+    }
+    updateBibliography(); sync();
+  }
 
   /* COMMAND DISPATCH */
   function handleCmd(cmd){
@@ -821,6 +907,8 @@
       case 'toggledate': stampDate=!stampDate; saveSettings(); renderDateCheck(); break;
       case 'toc': insertOrUpdateToc(); break;
       case 'footnote': insertFootnote(); break;
+      case 'citation': insertCitation(); break;
+      case 'bibliography': insertBibliography(); break;
     }
     sync();
   }
@@ -1248,6 +1336,11 @@
       if(node.nodeType===1 && node.classList && node.classList.contains('hw-footnotes')){
         node.querySelectorAll('.hw-fn').forEach((li,i)=>{ const t=(li.querySelector('.hw-fn-text')||{textContent:''}).textContent.trim(); out.push(indent+'[^'+(i+1)+']: '+t); }); out.push(''); return;
       }
+      if(node.nodeType===1 && node.classList && node.classList.contains('hw-bibliography')){
+        out.push(indent+'## References','');
+        node.querySelectorAll('.hw-bib-list li').forEach(li=>{ out.push(indent+'- '+li.textContent.trim()); });
+        out.push(''); return;
+      }
       const tag=node.tagName.toLowerCase();
       switch(tag){
         case 'h1':out.push(indent+'# '+inline(node).trim(),'');break;
@@ -1304,6 +1397,7 @@
   function inlineNode(node){
     if(node.nodeType===3)return node.textContent.replace(/ /g,' ');
     if(node.nodeType!==1)return '';
+    if(node.tagName.toLowerCase()==='span' && node.classList && node.classList.contains('hw-cite')) return node.textContent;
     const tag=node.tagName.toLowerCase();const inner=()=>inline(node);
     switch(tag){
       case 'strong':case 'b':{const t=inner();return t.trim()?'**'+t+'**':t;}
@@ -1729,7 +1823,9 @@
     collectHeadings: collectHeadings,
     renumberFootnotes: renumberFootnotes,
     htmlToMd: htmlToMd,
-    insertFootnote: insertFootnote
+    insertFootnote: insertFootnote,
+    collectSources: collectSources,
+    insertBibliography: insertBibliography
   };
 })();
 </script>
