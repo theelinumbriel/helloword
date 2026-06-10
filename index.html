@@ -219,13 +219,7 @@
     <button class="tab file" data-tab="file">File</button>
     <button class="tab active" data-tab="home">Home</button>
     <button class="tab" data-tab="insert">Insert</button>
-    <button class="tab" data-tab="draw">Draw</button>
-    <button class="tab" data-tab="design">Design</button>
-    <button class="tab" data-tab="layout">Layout</button>
-    <button class="tab" data-tab="references">References</button>
-    <button class="tab" data-tab="review">Review</button>
     <button class="tab" data-tab="view">View</button>
-    <button class="tab" data-tab="help">Help</button>
   </div>
 
   <!-- RIBBON BODY -->
@@ -326,13 +320,6 @@
     <div class="ribbon-panel" data-panel="view">
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="zoomreset"><span class="ic">🔍</span><span class="cap">100%</span></button><button class="big" data-cmd="zoomin"><span class="ic">➕</span><span class="cap">Zoom In</span></button><button class="big" data-cmd="zoomout"><span class="ic">➖</span><span class="cap">Zoom Out</span></button></div><div class="rgroup-label">Zoom</div></div>
     </div>
-
-    <div class="ribbon-panel" data-panel="draw"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Drawing tools aren't part of this Markdown editor.</div></div></div>
-    <div class="ribbon-panel" data-panel="design"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Design is handled by Markdown styles — see the Home tab.</div></div></div>
-    <div class="ribbon-panel" data-panel="layout"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Page layout is fixed (US Letter) for clean Markdown output.</div></div></div>
-    <div class="ribbon-panel" data-panel="references"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">Use links and headings on the Home / Insert tabs.</div></div></div>
-    <div class="ribbon-panel" data-panel="review"><div class="rgroup"><div class="rgroup-body" id="reviewWC" style="color:#555;font-size:12px;padding:0 16px">Word count: 0</div></div></div>
-    <div class="ribbon-panel" data-panel="help"><div class="rgroup"><div class="rgroup-body" style="color:#888;font-size:12px;padding:0 16px">helloword — a Word-style editor that saves to Markdown (.md). Ctrl/Cmd+S to save.</div></div></div>
   </div>
 
   <!-- RULER -->
@@ -731,7 +718,6 @@
     const words=text?text.split(/\s+/).filter(Boolean).length:0;
     document.getElementById('wordStat').textContent=words+(words===1?' word':' words');
     document.getElementById('charStat').textContent=text.length+' characters';
-    const rev=document.getElementById('reviewWC');if(rev)rev.textContent='Word count: '+words;
     const ph=Math.max(1,Math.ceil((editor.scrollHeight||0)/(11*96)));
     document.getElementById('pageStat').textContent='Page 1 of '+ph;
   }
