@@ -227,6 +227,11 @@
   .img-bar button:hover{background:var(--word-blue-light)}
   .page img.hw-sel{outline:2px solid var(--word-blue);outline-offset:1px}
 
+  .tbl-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px;flex-wrap:wrap;max-width:340px}
+  .tbl-bar button{font-size:11px;padding:3px 6px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
+  .tbl-bar button:hover{background:var(--word-blue-light)}
+  .tbl-bar .del{color:#b00020}
+
   @media print{
     html,body{height:auto;overflow:visible;background:#fff}
     .title-bar,.ribbon-tabs,.ribbon,.ruler,.status-bar,.filemenu,.listlib,#fileMenu,#modeMenu{display:none !important}
@@ -513,6 +518,17 @@
 
   <!-- IMAGE TOOLBAR -->
   <div class="img-bar hidden" id="imgBar"><button data-w="25">25%</button><button data-w="50">50%</button><button data-w="75">75%</button><button data-w="100">100%</button><button data-w="reset">Reset</button></div>
+
+  <!-- TABLE TOOLBAR -->
+  <div class="tbl-bar hidden" id="tblBar">
+    <button data-op="rowabove">Row ↑</button>
+    <button data-op="rowbelow">Row ↓</button>
+    <button data-op="colleft">Col ←</button>
+    <button data-op="colright">Col →</button>
+    <button data-op="delrow" class="del">Del Row</button>
+    <button data-op="delcol" class="del">Del Col</button>
+    <button data-op="deltable" class="del">Del Table</button>
+  </div>
 
   <!-- FIND & REPLACE DIALOG -->
   <div class="find-dialog hidden" id="findDialog">
@@ -1416,6 +1432,127 @@
   replaceOneBtn.addEventListener('click', replaceCurrent);
   replaceAllBtn.addEventListener('click', replaceAllMatches);
 
+  /* ============================================================
+     TABLE TOOLBAR — pure helpers + floating bar
+     ============================================================ */
+
+  /* --- Pure table helpers (exposed on HW for testing) --- */
+  function tableOfCell(cell){ return cell.closest('table'); }
+  function colIndex(cell){ return [...cell.parentElement.children].indexOf(cell); }
+
+  function insertRow(cell, below){
+    const tr=cell.closest('tr');
+    const nCols=tr.children.length;
+    const ntr=document.createElement('tr');
+    for(let i=0;i<nCols;i++){
+      const td=document.createElement('td');
+      td.innerHTML='&nbsp;';
+      ntr.appendChild(td);
+    }
+    tr.parentElement.insertBefore(ntr, below?tr.nextSibling:tr);
+    return ntr;
+  }
+
+  function insertCol(cell, right){
+    const table=cell.closest('table');
+    const ci=colIndex(cell);
+    table.querySelectorAll('tr').forEach(tr=>{
+      const ref=tr.children[ci];
+      const isHead=ref&&ref.tagName==='TH';
+      const c=document.createElement(isHead?'th':'td');
+      c.innerHTML=isHead?'Column':'&nbsp;';
+      tr.insertBefore(c, right?(ref?ref.nextSibling:null):ref);
+    });
+  }
+
+  function deleteRow(cell){
+    const tr=cell.closest('tr');
+    const table=cell.closest('table');
+    if(table.querySelectorAll('tr').length<=1){ table.remove(); return; }
+    tr.remove();
+  }
+
+  function deleteCol(cell){
+    const table=cell.closest('table');
+    const ci=colIndex(cell);
+    const rows=[...table.querySelectorAll('tr')];
+    if((rows[0]?rows[0].children.length:0)<=1){ table.remove(); return; }
+    rows.forEach(tr=>{ if(tr.children[ci]) tr.children[ci].remove(); });
+  }
+
+  function deleteTable(cell){
+    const t=cell.closest('table');
+    if(t) t.remove();
+  }
+
+  /* --- Floating table toolbar --- */
+  const tblBar=document.getElementById('tblBar');
+  let tblCell=null;   // the remembered cell
+
+  function currentCell(){
+    const n=window.getSelection().anchorNode;
+    if(!n) return null;
+    const el=n.nodeType===3?n.parentElement:n;
+    return el?el.closest('td,th'):null;
+  }
+
+  function positionTblBar(cell){
+    const table=cell.closest('table');
+    if(!table){ tblBar.classList.add('hidden'); tblCell=null; return; }
+    tblCell=cell;
+    const rect=table.getBoundingClientRect();
+    tblBar.classList.remove('hidden');
+    const barW=tblBar.offsetWidth||340;
+    let left=rect.left;
+    left=Math.max(8,Math.min(left,window.innerWidth-barW-8));
+    tblBar.style.left=left+'px';
+    tblBar.style.top=Math.max(4,rect.top-34)+'px';
+  }
+
+  function hideTblBar(){
+    tblBar.classList.add('hidden');
+    tblCell=null;
+  }
+
+  function updateTblBar(){
+    if(document.activeElement!==editor){ return; }
+    const cell=currentCell();
+    if(cell){ positionTblBar(cell); }
+    else{ hideTblBar(); }
+  }
+
+  document.addEventListener('selectionchange',()=>{
+    if(document.activeElement===editor) updateTblBar();
+  });
+
+  editor.addEventListener('click',()=>{ updateTblBar(); });
+
+  /* Prevent bar buttons from stealing the caret: handle on mousedown + preventDefault */
+  tblBar.addEventListener('mousedown',e=>{
+    e.preventDefault();   // keeps editor selection intact
+    e.stopPropagation();
+  });
+
+  tblBar.addEventListener('click',e=>{
+    e.stopPropagation();
+    const btn=e.target.closest('button[data-op]');
+    if(!btn||!tblCell) return;
+    const op=btn.dataset.op;
+    switch(op){
+      case 'rowabove': insertRow(tblCell,false); break;
+      case 'rowbelow': insertRow(tblCell,true);  break;
+      case 'colleft':  insertCol(tblCell,false); break;
+      case 'colright': insertCol(tblCell,true);  break;
+      case 'delrow':   deleteRow(tblCell);   break;
+      case 'delcol':   deleteCol(tblCell);   break;
+      case 'deltable': deleteTable(tblCell); break;
+    }
+    sync();
+    // re-evaluate bar position (hide if table was removed)
+    if(tblCell&&tblCell.isConnected){ positionTblBar(tblCell); }
+    else{ hideTblBar(); }
+  });
+
   renderMode();
   loadSettings();
   restore();ensureBlock();updateActive();editor.focus();
@@ -1435,7 +1572,14 @@
     stampedName: ()=>stampedName(),
     setStampDate: (v)=>{stampDate=!!v;},
     applyFontColor: applyFontColor,
-    getLastFontColor: ()=>lastFontColor
+    getLastFontColor: ()=>lastFontColor,
+    tableOfCell: tableOfCell,
+    colIndex: colIndex,
+    tableInsertRow: insertRow,
+    tableInsertCol: insertCol,
+    tableDeleteRow: deleteRow,
+    tableDeleteCol: deleteCol,
+    tableDeleteTable: deleteTable
   };
 })();
 </script>
