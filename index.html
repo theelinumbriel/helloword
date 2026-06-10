@@ -961,6 +961,22 @@
     return cleanMd + "\n\n" + HW_MARK_PREFIX + hwB64Encode(payload) + HW_MARK_SUFFIX + "\n";
   }
 
+  const HW_PAYLOAD_RE = /\n*<!--\s*helloword:v1\s+([A-Za-z0-9+/=]+)\s*-->\s*$/;
+  function parseFileText(text){
+    const m = text.match(HW_PAYLOAD_RE);
+    if(!m){ return { cleanMd: text.replace(/\s+$/,""), html:null, mode:"basic", stale:false }; }
+    const cleanMd = text.slice(0, m.index).replace(/\s+$/,"");
+    let payload=null;
+    try { payload = JSON.parse(hwB64Decode(m[1])); } catch(_){ payload=null; }
+    if(!payload || typeof payload.html!=="string"){
+      return { cleanMd: cleanMd, html:null, mode:"basic", stale:false };
+    }
+    if(payload.srcChecksum !== hwChecksum(cleanMd)){
+      return { cleanMd: cleanMd, html:null, mode:"basic", stale:true };  // edited elsewhere
+    }
+    return { cleanMd: cleanMd, html: payload.html, mode:"enriched", stale:false };
+  }
+
   /* paste plain text */
   editor.addEventListener('paste',e=>{
     const md=(e.clipboardData||window.clipboardData).getData('text/plain');
@@ -981,7 +997,8 @@
     checksum: hwChecksum,
     b64encode: hwB64Encode,
     b64decode: hwB64Decode,
-    composeFileText: composeFileText
+    composeFileText: composeFileText,
+    parseFileText: parseFileText
   };
 })();
 </script>
