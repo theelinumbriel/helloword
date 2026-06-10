@@ -312,6 +312,8 @@
                 <option>Times New Roman</option>
                 <option>Trebuchet MS</option>
                 <option>Verdana</option>
+                <option disabled>──────────</option>
+                <option value="__add_google__">➕ Add Google Font…</option>
               </select>
               <select class="combo fontsize" id="fontSize" title="Font Size">
                 <option>8</option><option>9</option><option>10</option><option selected>11</option>
@@ -575,7 +577,36 @@
     if(b.dataset.cmd) handleCmd(b.dataset.cmd);
   });
 
-  document.getElementById('fontName').addEventListener('change',e=>{ editor.focus(); document.execCommand('fontName',false,e.target.value); sync(); });
+  const fontSelect=document.getElementById('fontName');
+  let currentFont='Calibri';
+  fontSelect.addEventListener('change',e=>{
+    if(e.target.value==='__add_google__'){ fontSelect.value=currentFont; addGoogleFontFlow(); return; }
+    currentFont=e.target.value; editor.focus(); document.execCommand('fontName',false,e.target.value); sync();
+  });
+  /* ===== Google Fonts import (needs internet; built-in fonts stay offline) ===== */
+  let googleFonts=[];
+  function loadGoogleFont(name){
+    name=(name||'').trim(); if(!name) return;
+    const id='gf-'+name.replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+    if(!document.getElementById(id)){
+      const link=document.createElement('link'); link.rel='stylesheet'; link.id=id;
+      link.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(name).replace(/%20/g,'+')+':wght@400;700&display=swap';
+      document.head.appendChild(link);
+    }
+    if(![...fontSelect.options].some(o=>o.value===name||o.text===name)){
+      const opt=document.createElement('option'); opt.textContent=name;
+      fontSelect.insertBefore(opt, fontSelect.querySelector('option[disabled]'));   // before the separator
+    }
+  }
+  function addGoogleFontFlow(){
+    const name=prompt('Google Font name (e.g. Roboto, Lobster, Merriweather):');
+    if(!name||!name.trim()) return;
+    const clean=name.trim();
+    loadGoogleFont(clean);
+    if(!googleFonts.includes(clean)){ googleFonts.push(clean); saveSettings(); }
+    fontSelect.value=clean; currentFont=clean;
+    editor.focus(); document.execCommand('fontName',false,clean); sync();
+  }
   document.getElementById('fontSize').addEventListener('change',e=>{ editor.focus(); applyFontSize(e.target.value); sync(); });
   function applyFontSize(pt){
     document.execCommand('fontSize',false,'7');
@@ -964,8 +995,8 @@
   // strip any existing "YYYYMMDD[ HHMMSS ±HHMM]" prefix so it doesn't stack on re-save
   function cleanTitle(s){return (s||'').replace(/^\d{8}(\s+\d{6}\s+[+-]\d{4})?\s+/,'').replace(/\.md$/i,'').trim()||'Document1';}
   function stampedName(){const base=cleanTitle(docName.textContent).replace(/[\/\\:*?"<>|]/g,'-');return (stampDate?stampPrefix(new Date())+' ':'')+base+'.md';}
-  function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');if(typeof s.stampDate==='boolean')stampDate=s.stampDate;}catch(_){}}
-  function saveSettings(){try{localStorage.setItem(SETTINGS,JSON.stringify({stampDate:stampDate}));}catch(_){}}
+  function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');if(typeof s.stampDate==='boolean')stampDate=s.stampDate;if(Array.isArray(s.googleFonts)){googleFonts=s.googleFonts.slice();googleFonts.forEach(loadGoogleFont);}}catch(_){}}
+  function saveSettings(){try{localStorage.setItem(SETTINGS,JSON.stringify({stampDate:stampDate,googleFonts:googleFonts}));}catch(_){}}
   function renderDateCheck(){const el=document.getElementById('dateCheck');if(el)el.textContent=stampDate?'✓':'';}
 
   /* SAVE — overwrites the SAME file every time (no Downloads duplicates) */
