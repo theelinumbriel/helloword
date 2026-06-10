@@ -942,6 +942,18 @@
   }
   function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+  /* ===== ENRICHED MODE: pure helpers ===== */
+  function hwChecksum(str){             // djb2, returned as unsigned hex
+    let h=5381; for(let i=0;i<str.length;i++){ h=((h<<5)+h+str.charCodeAt(i))|0; }
+    return (h>>>0).toString(16);
+  }
+  function hwB64Encode(str){            // unicode-safe
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function hwB64Decode(b64){
+    return decodeURIComponent(escape(atob(b64)));
+  }
+
   /* paste plain text */
   editor.addEventListener('paste',e=>{
     const md=(e.clipboardData||window.clipboardData).getData('text/plain');
@@ -958,6 +970,11 @@
   });
 
   restore();ensureBlock();updateActive();editor.focus();
+  window.HW = {
+    checksum: hwChecksum,
+    b64encode: hwB64Encode,
+    b64decode: hwB64Decode
+  };
 })();
 </script>
 </body>
