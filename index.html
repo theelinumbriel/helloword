@@ -790,7 +790,11 @@
     docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
     document.title=docName.textContent+' - helloword';
     editor.focus();ensureBlock();sync();
-    if(parsed.stale){ saveStat.textContent='External edits detected, opened as Basic'; }
+    if(parsed.stale){
+      const msg='External edits detected, opened as Basic';
+      saveStat.textContent=msg;
+      setTimeout(()=>{ saveStat.textContent=msg; },450);   // outlast the autosave debounce so the notice sticks
+    }
   }
 
   /* Date/time helpers — YYYYMMDD + HHMMSS + tz offset (filename-safe) */
