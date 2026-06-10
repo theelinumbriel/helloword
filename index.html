@@ -222,6 +222,11 @@
   ::highlight(hw-find){background:#ffe27a}
   ::highlight(hw-find-current){background:#ff9632;color:#000}
 
+  .img-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px}
+  .img-bar button{font-size:11px;padding:3px 7px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
+  .img-bar button:hover{background:var(--word-blue-light)}
+  .page img.hw-sel{outline:2px solid var(--word-blue);outline-offset:1px}
+
   @media print{
     html,body{height:auto;overflow:visible;background:#fff}
     .title-bar,.ribbon-tabs,.ribbon,.ruler,.status-bar,.filemenu,.listlib,#fileMenu,#modeMenu{display:none !important}
@@ -504,6 +509,10 @@
   <input type="color" id="moreColor" class="hidden">
 
   <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" class="hidden">
+  <input type="file" id="imgInput" accept="image/*" class="hidden">
+
+  <!-- IMAGE TOOLBAR -->
+  <div class="img-bar hidden" id="imgBar"><button data-w="25">25%</button><button data-w="50">50%</button><button data-w="75">75%</button><button data-w="100">100%</button><button data-w="reset">Reset</button></div>
 
   <!-- FIND & REPLACE DIALOG -->
   <div class="find-dialog hidden" id="findDialog">
@@ -528,6 +537,7 @@
   const editor=document.getElementById('editor');
   const docName=document.getElementById('docName');
   const fileInput=document.getElementById('fileInput');
+  const imgInput=document.getElementById('imgInput');
   const saveStat=document.getElementById('saveStat');
   const fileMenu=document.getElementById('fileMenu');
   const modeToggle=document.getElementById('modeToggle');
@@ -652,7 +662,7 @@
       case 'hr': document.execCommand('insertHorizontalRule'); break;
       case 'pagebreak': document.execCommand('insertHTML',false,'<hr><p><br></p>'); break;
       case 'table': insertTable(); break;
-      case 'image': { const u=prompt('Image URL:','https://'); if(u)document.execCommand('insertImage',false,u); break; }
+      case 'image': imgInput.click(); break;
       case 'link': { const u=prompt('Link URL:','https://'); if(u)document.execCommand('createLink',false,u); break; }
       case 'grow': nudgeFont(1); break;
       case 'shrink': nudgeFont(-1); break;
@@ -972,6 +982,47 @@
     const r=new FileReader();
     r.onload=ev=>loadText(ev.target.result,file.name);
     r.readAsText(file);fileInput.value='';
+  });
+
+  /* ===== IMAGE INSERT (base64 data URI) ===== */
+  imgInput.addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=ev=>{ editor.focus(); document.execCommand('insertHTML',false,'<img src="'+ev.target.result+'" alt="">'); sync(); };
+    r.readAsDataURL(f); imgInput.value='';
+  });
+
+  /* ===== IMAGE RESIZE TOOLBAR ===== */
+  const imgBar=document.getElementById('imgBar');
+  let selImg=null;
+  editor.addEventListener('click',e=>{
+    if(e.target.tagName==='IMG'){
+      if(selImg&&selImg!==e.target) selImg.classList.remove('hw-sel');
+      selImg=e.target;
+      selImg.classList.add('hw-sel');
+      const rect=selImg.getBoundingClientRect();
+      imgBar.classList.remove('hidden');
+      const barW=imgBar.offsetWidth||160;
+      let left=rect.left+(rect.width-barW)/2;
+      left=Math.max(8,Math.min(left,window.innerWidth-barW-8));
+      imgBar.style.left=left+'px';
+      imgBar.style.top=Math.max(4,rect.top-38)+'px';
+      e.stopPropagation();
+    }
+  });
+  imgBar.addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-w]'); if(!btn||!selImg) return;
+    const w=btn.dataset.w;
+    if(w==='reset') selImg.style.removeProperty('width');
+    else selImg.style.width=w+'%';
+    sync();
+    e.stopPropagation();
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#imgBar')&&e.target.tagName!=='IMG'){
+      imgBar.classList.add('hidden');
+      if(selImg){selImg.classList.remove('hw-sel');selImg=null;}
+    }
   });
   function loadText(text,fileName){
     const parsed = parseFileText(text);
