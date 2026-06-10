@@ -197,6 +197,13 @@
   .filemenu .ic{width:18px;text-align:center}
   .filemenu hr{border:none;border-top:1px solid #eee;margin:4px 0}
   .hidden{display:none}
+  @media print{
+    html,body{height:auto;overflow:visible;background:#fff}
+    .title-bar,.ribbon-tabs,.ribbon,.ruler,.status-bar,.filemenu,.listlib,#fileMenu,#modeMenu{display:none !important}
+    .stage{overflow:visible;padding:0;display:block;background:#fff}
+    .page{box-shadow:none;border:none;margin:0;width:auto;max-width:none;min-height:auto;padding:0;transform:none !important}
+    @page{margin:1in}
+  }
 </style>
 </head>
 <body>
@@ -236,7 +243,6 @@
           <div class="rcol">
             <button class="sm" data-exec="cut" title="Cut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M7.7 7.7 20 18M7.7 16.3 20 6"/></svg></button>
             <button class="sm" data-exec="copy" title="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="1.8"/><path d="M5 15.5H4.3A1.8 1.8 0 0 1 2.5 13.7V4.3A1.8 1.8 0 0 1 4.3 2.5h9.4A1.8 1.8 0 0 1 15.5 4.3V5"/></svg></button>
-            <button class="sm" data-cmd="format-painter" title="Format Painter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4" y="3" width="14" height="5.4" rx="1"/><path d="M14 8.4v2.1a1.6 1.6 0 0 1-1.6 1.6H9.2A1.7 1.7 0 0 0 7.5 13.8v1.7"/><rect x="5.7" y="15.5" width="3.6" height="5.5" rx="1"/></svg></button>
           </div>
         </div>
         <div class="rgroup-label">Clipboard</div>
@@ -347,9 +353,6 @@
     <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
     <span class="si" id="buildTag" style="opacity:.6">build 9</span>
     <span class="spacer"></span>
-    <button class="vbtn" title="Read Mode">📖</button>
-    <button class="vbtn" title="Print Layout">📄</button>
-    <button class="vbtn" title="Web Layout">🌐</button>
     <div class="zoom">
       <button class="vbtn" data-cmd="zoomout">−</button>
       <input type="range" id="zoomRange" min="50" max="200" value="100" step="10">
@@ -500,7 +503,6 @@
       case 'exporthtml': exportHtml(); break;
       case 'print': window.print(); break;
       case 'paste': navigatorPaste(); break;
-      case 'format-painter': break;
       case 'inlineCode': wrapInlineCode(); break;
       case 'task': insertTaskList(); break;
       case 'quote': document.execCommand('formatBlock',false,'blockquote'); break;
