@@ -367,6 +367,8 @@
     <button data-cmd="saveas"><span class="ic">🗂️</span> Save As… <span style="opacity:.5;margin-left:auto">Ctrl+⇧+S</span></button>
     <button data-cmd="exporthtml"><span class="ic">🌐</span> Export as HTML</button>
     <button data-cmd="print"><span class="ic">🖨️</span> Print</button>
+    <hr>
+    <button data-cmd="toggledate"><span class="ic" id="dateCheck"></span> Add date &amp; time to filename</button>
   </div>
 
   <!-- MODE MENU -->
@@ -418,6 +420,8 @@
   const modeMenu=document.getElementById('modeMenu');
   let docMode='enriched';
   const STORAGE='wordlike.doc.v2';
+  const SETTINGS='wordlike.settings.v1';
+  let stampDate=false;
   let fileHandle=null;            // the .md file we're editing (File System Access API)
   const HAS_FS=!!window.showSaveFilePicker;   // Chrome/Edge on http(s)/localhost
   try{document.execCommand('styleWithCSS',false,true);}catch(_){}
@@ -516,6 +520,7 @@
       case 'zoomout': setZoom(zoom-10); break;
       case 'zoomreset': setZoom(100); break;
       case 'linespacing': cycleLineSpacing(); break;
+      case 'toggledate': stampDate=!stampDate; saveSettings(); renderDateCheck(); break;
     }
     sync();
   }
@@ -789,7 +794,10 @@
   function stampPrefix(d){return ''+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+' '+pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds())+' '+tzOffset(d);}
   // strip any existing "YYYYMMDD[ HHMMSS ±HHMM]" prefix so it doesn't stack on re-save
   function cleanTitle(s){return (s||'').replace(/^\d{8}(\s+\d{6}\s+[+-]\d{4})?\s+/,'').replace(/\.md$/i,'').trim()||'Document1';}
-  function stampedName(){return stampPrefix(new Date())+' '+cleanTitle(docName.textContent).replace(/[\/\\:*?"<>|]/g,'-')+'.md';}
+  function stampedName(){const base=cleanTitle(docName.textContent).replace(/[\/\\:*?"<>|]/g,'-');return (stampDate?stampPrefix(new Date())+' ':'')+base+'.md';}
+  function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');if(typeof s.stampDate==='boolean')stampDate=s.stampDate;}catch(_){}}
+  function saveSettings(){try{localStorage.setItem(SETTINGS,JSON.stringify({stampDate:stampDate}));}catch(_){}}
+  function renderDateCheck(){const el=document.getElementById('dateCheck');if(el)el.textContent=stampDate?'✓':'';}
 
   /* SAVE — overwrites the SAME file every time (no Downloads duplicates) */
   async function saveMarkdown(forceNew){
@@ -1020,7 +1028,9 @@
   });
 
   renderMode();
+  loadSettings();
   restore();ensureBlock();updateActive();editor.focus();
+  renderDateCheck();
   window.HW = {
     checksum: hwChecksum,
     b64encode: hwB64Encode,
@@ -1031,7 +1041,9 @@
     setMode: setMode,
     composeCurrentFileText: composeCurrentFileText,
     loadText: loadText,
-    flushAutosave: flushAutosave
+    flushAutosave: flushAutosave,
+    stampedName: ()=>stampedName(),
+    setStampDate: (v)=>{stampDate=!!v;}
   };
 })();
 </script>
