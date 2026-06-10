@@ -741,7 +741,7 @@
   function sync(){
     updateCounts();saveStat.textContent='Saving…';
     clearTimeout(t);t=setTimeout(()=>{
-      try{localStorage.setItem(STORAGE,JSON.stringify({name:docName.textContent.trim()||'Document1',html:editor.innerHTML}));saveStat.textContent='Autosaved ✓';}
+      try{localStorage.setItem(STORAGE,JSON.stringify({name:docName.textContent.trim()||'Document1',html:editor.innerHTML,mode:docMode}));saveStat.textContent='Autosaved ✓';}
       catch(_){saveStat.textContent='Autosave off';}
     },400);
   }
@@ -749,9 +749,11 @@
   docName.addEventListener('input',()=>{document.title=(docName.textContent.trim()||'Document1')+' - helloword';sync();});
   docName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();editor.focus();}});
   function restore(){
-    try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;}}catch(_){}
+    try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;if(d.mode==='basic'||d.mode==='enriched'){docMode=d.mode;}}}catch(_){}
     document.title=(docName.textContent.trim()||'Document1')+' - helloword';updateCounts();
+    renderMode();
   }
+  function flushAutosave(){ localStorage.setItem(STORAGE,JSON.stringify({name:docName.textContent.trim()||'Document1',html:editor.innerHTML,mode:docMode})); }
   function newDoc(){
     if(editor.innerText.trim()&&!confirm('Start a new document? Unsaved changes will be cleared.'))return;
     fileHandle=null;
@@ -1038,7 +1040,8 @@
     getMode: ()=>docMode,
     setMode: setMode,
     composeCurrentFileText: composeCurrentFileText,
-    loadText: loadText
+    loadText: loadText,
+    flushAutosave: flushAutosave
   };
 })();
 </script>
