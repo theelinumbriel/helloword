@@ -10,3 +10,6 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# Brainstorming visual-companion scratch
+.superpowers/

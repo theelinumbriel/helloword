@@ -40,10 +40,10 @@
   }
   .qat{display:flex;align-items:center;gap:1px}
   .qat .wlogo{
-    min-width:24px;height:20px;padding:0 4px;background:var(--word-blue);color:#fff;
-    border:1px solid rgba(255,255,255,.4);
+    min-width:26px;height:22px;padding:0 5px;background:var(--word-blue);color:#fff;
+    border:1px solid rgba(255,255,255,.45);
     border-radius:4px;display:flex;align-items:center;justify-content:center;
-    font-weight:700;font-family:var(--ui-font);margin-right:8px;font-size:12px;letter-spacing:-.5px;
+    font-weight:600;font-family:var(--ui-font);margin-right:8px;font-size:14px;letter-spacing:-.5px;line-height:1;
   }
   .qat button{
     background:transparent;border:none;color:#fff;width:24px;height:24px;
@@ -65,14 +65,14 @@
   .ribbon-tabs{background:var(--word-blue);height:30px;display:flex;align-items:flex-end;padding:0 6px;gap:2px;user-select:none}
   .ribbon-tabs .tab{
     color:#fff;background:transparent;border:none;padding:6px 12px;font-size:13px;font-family:var(--ui-font);
-    cursor:pointer;border-radius:4px 4px 0 0;line-height:1;position:relative;top:1px;
+    cursor:pointer;border-radius:4px 4px 0 0;line-height:1;position:relative;top:0;
   }
-  .ribbon-tabs .tab.file{background:var(--word-blue-dark);font-weight:600;margin-right:4px}
+  .ribbon-tabs .tab.file{background:var(--word-blue-dark);font-weight:600;margin-right:6px;border-radius:0;top:0}
   .ribbon-tabs .tab:hover:not(.active):not(.file){background:rgba(255,255,255,.16)}
   .ribbon-tabs .tab.active{background:var(--ribbon-bg);color:var(--word-blue);font-weight:600}
 
   /* ============ RIBBON BODY ============ */
-  .ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--ribbon-border);height:94px;display:flex;align-items:stretch;padding:4px 4px 0;overflow-x:auto;overflow-y:hidden}
+  .ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--ribbon-border);height:98px;display:flex;align-items:stretch;padding:4px 4px 0;overflow-x:auto;overflow-y:hidden}
   .ribbon-panel{display:none;align-items:stretch;height:100%}
   .ribbon-panel.active{display:flex;flex:1;justify-content:center}
   .rgroup{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 20px 2px;position:relative;min-height:100%}
@@ -81,6 +81,10 @@
   .rgroup-body{display:flex;align-items:center;gap:8px;flex:1}
   .rgroup-label{font-size:11px;color:#666;text-align:center;padding-bottom:2px}
   .rcol{display:flex;flex-direction:column;gap:3px;justify-content:center}
+  /* Clipboard group: smaller stacked icons (Cut/Copy/Format Painter), like Word */
+  .rgroup:first-child .rcol{gap:2px}
+  .rgroup:first-child .rcol .sm{width:20px;height:20px}
+  .rgroup:first-child .rcol .sm svg{width:15px;height:15px}
   .rrow{display:flex;align-items:center;gap:3px}
 
   button.big{background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 8px;min-width:54px;height:100%;color:#444;font-size:12px;font-family:var(--ui-font)}
@@ -100,15 +104,38 @@
   button.sm .ar{font-size:8px;margin-left:1px}
   button.sm.wide{width:auto;padding:0 7px;gap:5px;font-size:12px}
 
+  /* Split buttons (Bullets ▾ / Numbering ▾) + library popups */
+  .split-btn{display:inline-flex;align-items:stretch}
+  .split-btn .splitmain{border-top-right-radius:0;border-bottom-right-radius:0}
+  .split-btn .splitcaret{width:13px;border-top-left-radius:0;border-bottom-left-radius:0;font-size:7px;color:#666}
+  .listlib{position:fixed;background:#fff;border:1px solid #c9c9c9;box-shadow:0 6px 20px rgba(0,0,0,.22);border-radius:3px;z-index:60;padding:8px}
+  .listlib .llhead{font-size:11px;color:#666;margin:0 2px 6px;font-weight:600}
+  .listlib .grid{display:grid;grid-template-columns:repeat(4,42px);gap:5px}
+  .listlib .tile{width:42px;height:42px;border:1px solid #d8d8d8;background:#fff;border-radius:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Calibri,"Segoe UI",sans-serif;font-size:16px;color:#000;line-height:1.05;text-align:center}
+  .listlib .tile.num{font-size:9px;line-height:1.3}
+  .listlib .tile.none{font-size:10px;color:#888}
+  .listlib .tile:hover{border-color:var(--word-blue);background:var(--word-blue-light)}
+
   select.combo,input.combo{height:22px;border:1px solid #bcbcbc;background:#fff;border-radius:2px;font-size:12px;padding:0 4px;color:#222;font-family:var(--ui-font)}
   select.fontname{width:118px}
   select.fontsize{width:46px}
 
 
   /* ============ RULER ============ */
-  .ruler{height:20px;background:var(--doc-bg);display:flex;justify-content:center;align-items:center;border-bottom:1px solid #cfcfcf}
-  .ruler .track{width:8.5in;max-width:calc(100% - 32px);height:14px;background:#fff;border:1px solid #c9c9c9;position:relative;background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(1in - 1px),#d8d8d8 calc(1in - 1px),#d8d8d8 1in)}
-  .ruler .margin{position:absolute;top:0;bottom:0;background:#d9d9d9}
+  .ruler{height:22px;background:var(--doc-bg);display:flex;justify-content:center;align-items:center;border-bottom:1px solid #cfcfcf}
+  .ruler .track{width:8.5in;max-width:calc(100% - 32px);height:16px;background:#fff;border:1px solid #c1c4c8;position:relative;overflow:hidden}
+  .ruler .margin{position:absolute;top:0;bottom:0;background:#cfd4da}
+  /* Word-style tick marks: tall ticks each inch, short ticks each quarter inch */
+  .ruler .ticks{position:absolute;left:0;right:0;top:0;bottom:0;background-repeat:no-repeat;
+    background-image:
+      repeating-linear-gradient(to right,#9aa0a6 0 1px,transparent 1px 1in),
+      repeating-linear-gradient(to right,#c4c8cd 0 1px,transparent 1px calc(1in/4));
+    background-size:100% 9px,100% 5px}
+  /* Indent markers (first-line + hanging on the left, right-indent on the right) */
+  .ruler .ind{position:absolute;width:0;height:0}
+  .ruler .ind.fl{top:0;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #767b83}
+  .ruler .ind.hang{bottom:0;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:6px solid #767b83}
+  .ruler .ind.right{bottom:0;transform:translateX(50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:6px solid #767b83}
 
   /* ============ DOCUMENT STAGE ============ */
   .stage{flex:1;overflow:auto;padding:24px 0 80px;display:flex;flex-direction:column;align-items:center}
@@ -122,9 +149,12 @@
   .page h2{font-size:13pt;font-weight:600;color:#2e74b5;margin:8pt 0 4pt}
   .page h3{font-size:12pt;font-weight:600;color:#1f4d78;margin:8pt 0 4pt}
   .page h4{font-size:11pt;font-weight:600;font-style:italic;color:#2e74b5;margin:8pt 0 4pt}
-  .page ul,.page ol{margin:0 0 8pt;padding-left:.4in}
-  .page li{margin:2pt 0}
-  .page li>ul,.page li>ol{margin:2pt 0 2pt;padding-left:.3in}
+  /* Word numbering variants (1) and a)) */
+  @counter-style hw-paren-decimal{system:extends decimal;suffix:") "}
+  @counter-style hw-paren-alpha{system:extends lower-alpha;suffix:") "}
+  .page ul,.page ol{margin:0 0 8pt;padding-left:.5in}
+  .page li{margin:0;line-height:1.5}
+  .page li>ul,.page li>ol{margin:0;padding-left:.4in}
   /* Word-style level-based markers */
   .page ul{list-style-type:disc}
   .page ul ul{list-style-type:circle}
@@ -134,7 +164,7 @@
   .page ol ol{list-style-type:lower-alpha}
   .page ol ol ol{list-style-type:lower-roman}
   .page ol ol ol ol{list-style-type:decimal}
-  .page li::marker{color:#444}
+  .page li::marker{color:#000;font-size:1.05em}
   .page blockquote{margin:0 0 8pt;padding:2pt 14pt;border-left:3px solid #2e74b5;color:#444}
   .page pre{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;font-family:Consolas,"SF Mono",Menlo,monospace;font-size:10pt;margin:0 0 8pt;overflow:auto}
   .page code{font-family:Consolas,"SF Mono",Menlo,monospace;font-size:.92em;background:#f0f0f3;border-radius:3px;padding:.05em .3em}
@@ -179,7 +209,6 @@
     </div>
     <div class="title-center">
       <span class="docttl" id="docName" contenteditable="true" spellcheck="false">Document1</span>
-      <span class="sub">— helloword</span>
     </div>
   </div>
 
@@ -214,7 +243,7 @@
             <button class="sm" data-cmd="format-painter" title="Format Painter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="4" y="3" width="14" height="5.4" rx="1"/><path d="M14 8.4v2.1a1.6 1.6 0 0 1-1.6 1.6H9.2A1.7 1.7 0 0 0 7.5 13.8v1.7"/><rect x="5.7" y="15.5" width="3.6" height="5.5" rx="1"/></svg></button>
           </div>
         </div>
-        <div class="rgroup-label"></div>
+        <div class="rgroup-label">Clipboard</div>
       </div>
 
       <!-- Font -->
@@ -255,8 +284,14 @@
         <div class="rgroup-body">
           <div class="rcol">
             <div class="rrow">
-              <button class="sm" data-exec="insertUnorderedList" title="Bullets"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="4.2" cy="6" r="1.7"/><circle cx="4.2" cy="12" r="1.7"/><circle cx="4.2" cy="18" r="1.7"/><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/></svg></button>
-              <button class="sm" data-exec="insertOrderedList" title="Numbering"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/><text x="1.4" y="8.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">1</text><text x="1.4" y="14.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">2</text><text x="1.4" y="20.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">3</text></svg></button>
+              <span class="split-btn">
+                <button class="sm splitmain" data-exec="insertUnorderedList" title="Bullets"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="4.2" cy="6" r="1.7"/><circle cx="4.2" cy="12" r="1.7"/><circle cx="4.2" cy="18" r="1.7"/><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/></svg></button>
+                <button class="sm splitcaret" data-cmd="bulletlib" title="Bullet Library">▼</button>
+              </span>
+              <span class="split-btn">
+                <button class="sm splitmain" data-exec="insertOrderedList" title="Numbering"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="8.5" y="5" width="11.5" height="2" rx="1"/><rect x="8.5" y="11" width="11.5" height="2" rx="1"/><rect x="8.5" y="17" width="11.5" height="2" rx="1"/><text x="1.4" y="8.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">1</text><text x="1.4" y="14.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">2</text><text x="1.4" y="20.2" font-size="6.6" font-family="Segoe UI,Arial,sans-serif" font-weight="700">3</text></svg></button>
+                <button class="sm splitcaret" data-cmd="numberlib" title="Numbering Library">▼</button>
+              </span>
               <button class="sm" data-cmd="task" title="Task List"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="6" height="6" rx="1.2"/><path d="M3.7 7 5 8.3 7.3 5.4"/><rect x="2.5" y="14" width="6" height="6" rx="1.2"/><line x1="11.5" y1="7" x2="20" y2="7"/><line x1="11.5" y1="17" x2="20" y2="17"/></svg></button>
               <button class="sm" data-exec="outdent" title="Decrease Indent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="20" y2="5"/><line x1="11" y1="10" x2="20" y2="10"/><line x1="11" y1="14" x2="20" y2="14"/><line x1="4" y1="19" x2="20" y2="19"/><path d="M7 9 4 12l3 3"/></svg></button>
               <button class="sm" data-exec="indent" title="Increase Indent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="20" y2="5"/><line x1="11" y1="10" x2="20" y2="10"/><line x1="11" y1="14" x2="20" y2="14"/><line x1="4" y1="19" x2="20" y2="19"/><path d="M4 9l3 3-3 3"/></svg></button>
@@ -299,7 +334,14 @@
   </div>
 
   <!-- RULER -->
-  <div class="ruler"><div class="track"><div class="margin" style="left:0;width:1in"></div><div class="margin" style="right:0;width:1in"></div></div></div>
+  <div class="ruler"><div class="track">
+    <div class="margin" style="left:0;width:1in"></div>
+    <div class="margin" style="right:0;width:1in"></div>
+    <div class="ticks"></div>
+    <span class="ind fl" style="left:1in"></span>
+    <span class="ind hang" style="left:1in"></span>
+    <span class="ind right" style="right:1in"></span>
+  </div></div>
 
   <!-- DOCUMENT -->
   <div class="stage" id="stage">
@@ -313,7 +355,7 @@
     <span class="si" id="charStat">0 characters</span>
     <span class="si">English (United States)</span>
     <span class="si" id="saveStat">Autosaved</span>
-    <span class="si" id="buildTag" style="opacity:.6">build 8</span>
+    <span class="si" id="buildTag" style="opacity:.6">build 9</span>
     <span class="spacer"></span>
     <button class="vbtn" title="Read Mode">📖</button>
     <button class="vbtn" title="Print Layout">📄</button>
@@ -335,6 +377,35 @@
     <button data-cmd="saveas"><span class="ic">🗂️</span> Save As… <span style="opacity:.5;margin-left:auto">Ctrl+⇧+S</span></button>
     <button data-cmd="exporthtml"><span class="ic">🌐</span> Export as HTML</button>
     <button data-cmd="print"><span class="ic">🖨️</span> Print</button>
+  </div>
+
+  <!-- BULLET LIBRARY -->
+  <div class="listlib hidden" id="bulletLib">
+    <div class="llhead">Bullet Library</div>
+    <div class="grid">
+      <div class="tile none" data-style="none">None</div>
+      <div class="tile" data-style="disc">●</div>
+      <div class="tile" data-style="circle">○</div>
+      <div class="tile" data-style="square">▪</div>
+      <div class="tile" data-style='"❖  "'>❖</div>
+      <div class="tile" data-style='"➢  "'>➢</div>
+      <div class="tile" data-style='"✓  "'>✓</div>
+    </div>
+  </div>
+
+  <!-- NUMBERING LIBRARY -->
+  <div class="listlib hidden" id="numberLib">
+    <div class="llhead">Numbering Library</div>
+    <div class="grid">
+      <div class="tile none" data-style="none">None</div>
+      <div class="tile num" data-style="decimal">1.<br>2.<br>3.</div>
+      <div class="tile num" data-style="hw-paren-decimal">1)<br>2)<br>3)</div>
+      <div class="tile num" data-style="upper-roman">I.<br>II.<br>III.</div>
+      <div class="tile num" data-style="upper-alpha">A.<br>B.<br>C.</div>
+      <div class="tile num" data-style="hw-paren-alpha">a)<br>b)<br>c)</div>
+      <div class="tile num" data-style="lower-alpha">a.<br>b.<br>c.</div>
+      <div class="tile num" data-style="lower-roman">i.<br>ii.<br>iii.</div>
+    </div>
   </div>
 
   <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" class="hidden">
@@ -370,6 +441,7 @@
   document.getElementById('ribbon').addEventListener('click',e=>{
     const b=e.target.closest('button,.style-card'); if(!b)return;
     if(b.classList.contains('style-card')){ applyStyle(b.dataset.style); return; }
+    if(b.dataset.cmd==='bulletlib'||b.dataset.cmd==='numberlib'){ openListLib(b.dataset.cmd,b); return; }
     if(b.dataset.exec){ editor.focus(); document.execCommand(b.dataset.exec,false,null); sync(); return; }
     if(b.dataset.cmd) handleCmd(b.dataset.cmd);
   });
@@ -587,6 +659,40 @@
       if(f&&f.nodeType===3&&!/^\s*[☐☑✓]/.test(f.textContent))f.textContent='☐ '+f.textContent;
     });
   }
+
+  /* ===== BULLET / NUMBERING LIBRARIES (Word ▾ pickers) ===== */
+  const bulletLib=document.getElementById('bulletLib');
+  const numberLib=document.getElementById('numberLib');
+  function openListLib(which,btn){
+    const lib=which==='bulletlib'?bulletLib:numberLib;
+    const other=which==='bulletlib'?numberLib:bulletLib;
+    other.classList.add('hidden');
+    if(!lib.classList.contains('hidden')){lib.classList.add('hidden');return;}
+    const r=btn.getBoundingClientRect();
+    lib.classList.remove('hidden');                       // unhide first so width is measurable
+    const w=lib.offsetWidth;
+    let left=r.left; if(left+w>window.innerWidth-8) left=window.innerWidth-8-w;
+    lib.style.left=Math.max(8,left)+'px';
+    lib.style.top=(r.bottom+2)+'px';
+  }
+  function applyListStyle(kind,style){
+    editor.focus();
+    let li=liOf();
+    let list=li?li.closest(kind==='ol'?'ol':'ul'):null;
+    if(!list){                                            // no list yet -> make one
+      document.execCommand(kind==='ol'?'insertOrderedList':'insertUnorderedList');
+      li=liOf(); list=li?li.closest('ul,ol'):null;
+    }
+    if(list) list.style.listStyleType=style;
+    sync();
+  }
+  bulletLib.addEventListener('click',e=>{const t=e.target.closest('[data-style]');if(!t)return;applyListStyle('ul',t.dataset.style);bulletLib.classList.add('hidden');});
+  numberLib.addEventListener('click',e=>{const t=e.target.closest('[data-style]');if(!t)return;applyListStyle('ol',t.dataset.style);numberLib.classList.add('hidden');});
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.listlib')&&!e.target.closest('[data-cmd="bulletlib"]')&&!e.target.closest('[data-cmd="numberlib"]')){
+      bulletLib.classList.add('hidden');numberLib.classList.add('hidden');
+    }
+  });
 
   /* ACTIVE STATE + COUNTS */
   function updateActive(){
