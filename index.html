@@ -230,6 +230,13 @@
   .page .hw-toc a{color:#0563c1;text-decoration:none}
   .page .hw-toc a:hover{text-decoration:underline}
 
+  .page .hw-fnref{color:#0563c1;font-size:.7em;cursor:pointer}
+  .page .hw-footnotes{margin-top:14pt;font-size:9.5pt;color:#333;user-select:text}
+  .page .hw-footnotes hr{border:none;border-top:1px solid #ccc;margin:0 0 6pt}
+  .page .hw-fnlist{padding-left:.3in;margin:0}
+  .page .hw-fn{margin:2pt 0}
+  .page .hw-fn-back{margin-left:6px;text-decoration:none;color:#0563c1}
+
   .img-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px}
   .img-bar button{font-size:11px;padding:3px 7px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
   .img-bar button:hover{background:var(--word-blue-light)}
@@ -416,7 +423,7 @@
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="image"><span class="ic">🖼️</span><span class="cap">Pictures</span></button></div><div class="rgroup-label">Illustrations</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="link"><span class="ic">🔗</span><span class="cap">Link</span></button><button class="big" data-cmd="hr"><span class="ic">―</span><span class="cap">H. Line</span></button></div><div class="rgroup-label">Links</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="codeblock"><span class="ic">&lt;/&gt;</span><span class="cap">Code Block</span></button><button class="big" data-cmd="quote"><span class="ic">❝</span><span class="cap">Quote</span></button></div><div class="rgroup-label">Blocks</div></div>
-      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button></div><div class="rgroup-label">Reference</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button><button class="big" data-cmd="footnote"><span class="ic">›¹</span><span class="cap">Footnote</span></button></div><div class="rgroup-label">Reference</div></div>
     </div>
 
     <!-- VIEW -->
@@ -569,6 +576,7 @@
   const modeMenu=document.getElementById('modeMenu');
   let docMode='enriched';
   let lastHighlight='#ffff00', lastFontColor='#c00000';
+  let fnCounter=0;
   const STORAGE='wordlike.doc.v2';
   const SETTINGS='wordlike.settings.v1';
   let stampDate=false;
@@ -689,6 +697,96 @@
     sync();
   }
 
+  /* ===== FOOTNOTES ===== */
+  function renumberFootnotes(){
+    const refs=[...editor.querySelectorAll('sup.hw-fnref')];
+    if(!refs.length){
+      const old=editor.querySelector('section.hw-footnotes');
+      if(old) old.remove();
+      return;
+    }
+    // Preserve existing note texts keyed by data-fid
+    const texts={};
+    editor.querySelectorAll('.hw-fn').forEach(li=>{
+      const fid=li.dataset.fid;
+      const span=li.querySelector('.hw-fn-text');
+      if(fid) texts[fid]=span?span.textContent:'';
+    });
+    // Ensure footnotes section exists at end of editor
+    let section=editor.querySelector('section.hw-footnotes');
+    if(!section){
+      section=document.createElement('section');
+      section.className='hw-footnotes';
+      section.contentEditable='false';
+      section.innerHTML='<hr><ol class="hw-fnlist"></ol>';
+      editor.appendChild(section);
+    }
+    // Rebuild the list
+    const ol=section.querySelector('.hw-fnlist')||section.appendChild(document.createElement('ol'));
+    if(!ol.classList.contains('hw-fnlist')) ol.className='hw-fnlist';
+    ol.innerHTML='';
+    refs.forEach((sup,idx)=>{
+      const n=idx+1;
+      const k=sup.dataset.fid;
+      // update the ref
+      sup.id='fnref-'+k;
+      const a=sup.querySelector('a');
+      if(a){ a.textContent='['+n+']'; a.href='#fn-'+k; }
+      // create list item
+      const li=document.createElement('li');
+      li.className='hw-fn';
+      li.dataset.fid=k;
+      li.id='fn-'+k;
+      const txt=texts[k]!==undefined?texts[k]:'';
+      li.innerHTML='<span class="hw-fn-text" contenteditable="true">'+escapeHtml(txt)+'</span> <a class="hw-fn-back" href="#fnref-'+k+'">↩</a>';
+      ol.appendChild(li);
+    });
+  }
+
+  function insertFootnote(){
+    const k=++fnCounter;
+    // Build the sup element for DOM fallback
+    const sup=document.createElement('sup');
+    sup.className='hw-fnref';
+    sup.dataset.fid=String(k);
+    sup.id='fnref-'+k;
+    const a=document.createElement('a');
+    a.href='#fn-'+k;
+    a.textContent='[?]';
+    sup.appendChild(a);
+    // Try execCommand first (works in real browser with user activation); fall back to direct DOM
+    const html='<sup class="hw-fnref" data-fid="'+k+'" id="fnref-'+k+'"><a href="#fn-'+k+'">[?]</a></sup>';
+    document.execCommand('insertHTML',false,html);
+    // Check if execCommand actually inserted the element (headless Chrome returns true but does nothing)
+    if(!editor.querySelector('sup.hw-fnref[data-fid="'+k+'"]')){
+      // DOM fallback: insert at selection or append
+      const sel=getSelection();
+      if(sel&&sel.rangeCount){
+        const range=sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(sup);
+        range.setStartAfter(sup);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        editor.appendChild(sup);
+      }
+    }
+    renumberFootnotes();
+    // focus the new note's text for typing
+    const li=editor.querySelector('.hw-fn[data-fid="'+k+'"] .hw-fn-text');
+    if(li){ const r=document.createRange(); r.selectNodeContents(li); r.collapse(true); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+    sync();
+  }
+
+  // Auto-renumber when refs are deleted or content changes
+  editor.addEventListener('input',e=>{
+    if(editor.querySelector('sup.hw-fnref')||editor.querySelector('section.hw-footnotes')){
+      renumberFootnotes();
+    }
+  });
+
   /* COMMAND DISPATCH */
   function handleCmd(cmd){
     if(!cmd)return;
@@ -722,6 +820,7 @@
       case 'linespacing': cycleLineSpacing(); break;
       case 'toggledate': stampDate=!stampDate; saveSettings(); renderDateCheck(); break;
       case 'toc': insertOrUpdateToc(); break;
+      case 'footnote': insertFootnote(); break;
     }
     sync();
   }
@@ -1146,6 +1245,9 @@
         node.querySelectorAll('.hw-toc-list li').forEach(li=>{ const a=li.querySelector('a'); if(a){ const indent2=' '.repeat(Math.max(0,parseInt(li.style.marginLeft)||0)/16*2); out.push(indent+indent2+'- ['+a.textContent+'](#'+(a.getAttribute('href')||'').replace(/^#/,'')+')'); } });
         out.push(''); return;
       }
+      if(node.nodeType===1 && node.classList && node.classList.contains('hw-footnotes')){
+        node.querySelectorAll('.hw-fn').forEach((li,i)=>{ const t=(li.querySelector('.hw-fn-text')||{textContent:''}).textContent.trim(); out.push(indent+'[^'+(i+1)+']: '+t); }); out.push(''); return;
+      }
       const tag=node.tagName.toLowerCase();
       switch(tag){
         case 'h1':out.push(indent+'# '+inline(node).trim(),'');break;
@@ -1212,6 +1314,7 @@
       case 'a':return '['+inner()+']('+(node.getAttribute('href')||'')+')';
       case 'img':return `![${node.alt||''}](${node.getAttribute('src')||''})`;
       case 'br':return '  \n';
+      case 'sup':if(node.classList&&node.classList.contains('hw-fnref')){const a=node.querySelector('a');const n=(a?a.textContent:'').replace(/[^0-9]/g,'');return '[^'+n+']';}return inner();
       default:return inner();
     }
   }
@@ -1623,7 +1726,10 @@
     tableDeleteCol: deleteCol,
     tableDeleteTable: deleteTable,
     slugify: slugify,
-    collectHeadings: collectHeadings
+    collectHeadings: collectHeadings,
+    renumberFootnotes: renumberFootnotes,
+    htmlToMd: htmlToMd,
+    insertFootnote: insertFootnote
   };
 })();
 </script>
