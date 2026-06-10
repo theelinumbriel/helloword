@@ -243,6 +243,9 @@
   .page .hw-bib-list{padding-left:.3in;margin:0}
   .page .hw-bib-list li{margin:3pt 0}
 
+  .page .hw-eq{cursor:pointer}
+  .page .hw-eq-block{display:block;text-align:center;margin:8pt 0}
+
   .img-bar{position:fixed;z-index:70;background:#fff;border:1px solid #c9c9c9;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:4px;padding:4px;display:flex;gap:3px}
   .img-bar button{font-size:11px;padding:3px 7px;border:1px solid #d8d8d8;background:#fff;border-radius:3px;cursor:pointer;font-family:var(--ui-font)}
   .img-bar button:hover{background:var(--word-blue-light)}
@@ -433,7 +436,7 @@
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="image"><span class="ic">🖼️</span><span class="cap">Pictures</span></button></div><div class="rgroup-label">Illustrations</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="link"><span class="ic">🔗</span><span class="cap">Link</span></button><button class="big" data-cmd="hr"><span class="ic">―</span><span class="cap">H. Line</span></button></div><div class="rgroup-label">Links</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="codeblock"><span class="ic">&lt;/&gt;</span><span class="cap">Code Block</span></button><button class="big" data-cmd="quote"><span class="ic">❝</span><span class="cap">Quote</span></button></div><div class="rgroup-label">Blocks</div></div>
-      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button><button class="big" data-cmd="footnote"><span class="ic">›¹</span><span class="cap">Footnote</span></button><button class="big" data-cmd="citation"><span class="ic">" "</span><span class="cap">Citation</span></button><button class="big" data-cmd="bibliography"><span class="ic">📚</span><span class="cap">Bibliography</span></button></div><div class="rgroup-label">Reference</div></div>
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="toc"><span class="ic">&#x1F4CB;</span><span class="cap">Table of<br>Contents</span></button><button class="big" data-cmd="footnote"><span class="ic">›¹</span><span class="cap">Footnote</span></button><button class="big" data-cmd="citation"><span class="ic">" "</span><span class="cap">Citation</span></button><button class="big" data-cmd="bibliography"><span class="ic">📚</span><span class="cap">Bibliography</span></button><button class="big" data-cmd="equation"><span class="ic">∑</span><span class="cap">Equation</span></button></div><div class="rgroup-label">Reference</div></div>
     </div>
 
     <!-- VIEW -->
@@ -803,6 +806,17 @@
     }
   });
 
+  // Click-to-edit equations
+  editor.addEventListener('click',e=>{
+    const eq=e.target.closest && e.target.closest('.hw-eq'); if(!eq) return;
+    const cur=eq.getAttribute('data-tex')||''; const wasDisp=eq.getAttribute('data-display')==='1';
+    const input=prompt('Edit LaTeX (wrap in $$...$$ for display):', wasDisp?('$$'+cur+'$$'):cur);
+    if(input===null) return;
+    let tex=input.trim(), disp=false; const m=tex.match(/^\$\$([\s\S]*)\$\$$/); if(m){tex=m[1].trim();disp=true;}
+    if(!tex){ eq.remove(); sync(); return; }
+    eq.className='hw-eq'+(disp?' hw-eq-block':''); eq.setAttribute('data-tex',attrEsc(tex)); eq.setAttribute('data-display',disp?'1':'0'); eq.innerHTML=renderEq(tex,disp); sync();
+  });
+
   /* ===== CITATIONS + BIBLIOGRAPHY ===== */
   function collectSources(){
     const map={};
@@ -880,6 +894,47 @@
     updateBibliography(); sync();
   }
 
+  /* ===== EQUATIONS (KaTeX) ===== */
+  function attrEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function renderEq(tex,disp){
+    try{
+      if(typeof katex==='undefined') throw new Error('no katex');
+      return katex.renderToString(tex,{throwOnError:false,displayMode:!!disp});
+    }catch(e){return '<span style="color:#b00">'+attrEsc(tex)+'</span>';}
+  }
+  function eqHtml(tex,disp){
+    return '<span class="hw-eq'+(disp?' hw-eq-block':'')+'" contenteditable="false" data-tex="'+attrEsc(tex)+'" data-display="'+(disp?1:0)+'">'+renderEq(tex,disp)+'</span>';
+  }
+  function insertEquation(){
+    const input=prompt('Enter LaTeX (wrap in $$...$$ for a display equation):','');
+    if(input===null) return;
+    let tex=input.trim(), disp=false;
+    const m=tex.match(/^\$\$([\s\S]*)\$\$$/); if(m){ tex=m[1].trim(); disp=true; }
+    if(!tex) return;
+    const html=eqHtml(tex,disp)+'&nbsp;';
+    document.execCommand('insertHTML',false,html);
+    // Fallback if execCommand didn't insert (headless Chrome)
+    if(!editor.querySelector('.hw-eq[data-tex="'+attrEsc(tex).replace(/"/g,'\\"')+'"]')){
+      const sel=getSelection();
+      const tmp=document.createElement('div');
+      tmp.innerHTML=html;
+      const frag=document.createDocumentFragment();
+      let child;
+      while((child=tmp.firstChild)) frag.appendChild(child);
+      if(sel&&sel.rangeCount){
+        const range=sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(frag);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        editor.appendChild(frag);
+      }
+    }
+    sync();
+  }
+
   /* COMMAND DISPATCH */
   function handleCmd(cmd){
     if(!cmd)return;
@@ -916,6 +971,7 @@
       case 'footnote': insertFootnote(); break;
       case 'citation': insertCitation(); break;
       case 'bibliography': insertBibliography(); break;
+      case 'equation': insertEquation(); break;
     }
     sync();
   }
@@ -1405,6 +1461,7 @@
     if(node.nodeType===3)return node.textContent.replace(/ /g,' ');
     if(node.nodeType!==1)return '';
     if(node.tagName.toLowerCase()==='span' && node.classList && node.classList.contains('hw-cite')) return node.textContent;
+    if(node.tagName.toLowerCase()==='span' && node.classList && node.classList.contains('hw-eq')){ const tex=node.getAttribute('data-tex')||''; return (node.getAttribute('data-display')==='1'?'$$'+tex+'$$':'$'+tex+'$'); }
     const tag=node.tagName.toLowerCase();const inner=()=>inline(node);
     switch(tag){
       case 'strong':case 'b':{const t=inner();return t.trim()?'**'+t+'**':t;}
@@ -1431,7 +1488,9 @@
       .replace(/__([^_]+)__/g,'<strong>$1</strong>')
       .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>')
       .replace(/(^|[^_])_([^_\n]+)_/g,'$1<em>$2</em>')
-      .replace(/~~([^~]+)~~/g,'<s>$1</s>');
+      .replace(/~~([^~]+)~~/g,'<s>$1</s>')
+      .replace(/\$\$([^$]+)\$\$/g,(m,t)=>{ try{return eqHtml(t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),true);}catch(err){return m;} })
+      .replace(/\$([^$\n]+)\$/g,(m,t)=>{ try{return eqHtml(t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),false);}catch(err){return m;} });
     while(i<lines.length){
       let line=lines[i];
       if(/^\s*$/.test(line)){i++;continue;}
@@ -1830,6 +1889,10 @@
     collectHeadings: collectHeadings,
     renumberFootnotes: renumberFootnotes,
     htmlToMd: htmlToMd,
+    mdToHtml: mdToHtml,
+    eqHtml: eqHtml,
+    renderEq: renderEq,
+    attrEsc: attrEsc,
     insertFootnote: insertFootnote,
     collectSources: collectSources,
     insertBibliography: insertBibliography
