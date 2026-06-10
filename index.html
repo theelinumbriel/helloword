@@ -797,7 +797,7 @@
 
   /* SAVE — overwrites the SAME file every time (no Downloads duplicates) */
   async function saveMarkdown(forceNew){
-    const md=htmlToMd(editor);
+    const md=composeCurrentFileText();
     const fn=stampedName();
     if(HAS_FS){
       try{
@@ -986,6 +986,12 @@
     return body + "\n\n" + HW_MARK_PREFIX + hwB64Encode(payload) + HW_MARK_SUFFIX + "\n";
   }
 
+  function composeCurrentFileText(){
+    const md = htmlToMd(editor);
+    const name = (docName.textContent.trim()||'Document1');
+    return composeFileText(md, editor.innerHTML, name, docMode);
+  }
+
   const HW_PAYLOAD_RE = /\n*<!--\s*helloword:v1\s+([A-Za-z0-9+/=]+)\s*-->\s*$/;
   function parseFileText(text){
     const m = text.match(HW_PAYLOAD_RE);
@@ -1026,7 +1032,8 @@
     composeFileText: composeFileText,
     parseFileText: parseFileText,
     getMode: ()=>docMode,
-    setMode: setMode
+    setMode: setMode,
+    composeCurrentFileText: composeCurrentFileText
   };
 })();
 </script>
