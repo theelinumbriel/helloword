@@ -1803,15 +1803,20 @@
 
   function positionTblBar(cell){
     const table=cell.closest('table');
-    if(!table){ tblBar.classList.add('hidden'); tblCell=null; return; }
+    if(!table){ hideTblBar(); return; }
     tblCell=cell;
     const rect=table.getBoundingClientRect();
+    const stageEl=document.getElementById('stage');
+    const sr=stageEl?stageEl.getBoundingClientRect():{top:120,bottom:window.innerHeight};
+    // hide if the table is scrolled out of the visible document area (e.g. up behind the ribbon)
+    if(rect.bottom<sr.top+8 || rect.top>sr.bottom-8){ hideTblBar(); return; }
     tblBar.classList.remove('hidden');
     const barW=tblBar.offsetWidth||340;
-    let left=rect.left;
-    left=Math.max(8,Math.min(left,window.innerWidth-barW-8));
+    const left=Math.max(8,Math.min(rect.left,window.innerWidth-barW-8));
+    let top=rect.top-34;
+    if(top<sr.top+2) top=sr.top+2;   // never overlap the ribbon/ruler
     tblBar.style.left=left+'px';
-    tblBar.style.top=Math.max(4,rect.top-34)+'px';
+    tblBar.style.top=top+'px';
   }
 
   function hideTblBar(){
@@ -1820,7 +1825,7 @@
   }
 
   function updateTblBar(){
-    if(document.activeElement!==editor){ return; }
+    if(document.activeElement!==editor){ hideTblBar(); return; }
     const cell=currentCell();
     if(cell){ positionTblBar(cell); }
     else{ hideTblBar(); }
@@ -1831,6 +1836,10 @@
   });
 
   editor.addEventListener('click',()=>{ updateTblBar(); });
+  editor.addEventListener('blur',()=>{ hideTblBar(); });          // hide when focus leaves the page
+  (function(){ const s=document.getElementById('stage');
+    if(s) s.addEventListener('scroll',()=>{ if(tblCell) positionTblBar(tblCell); });   // follow the table / hide when it scrolls away
+  })();
 
   /* Prevent bar buttons from stealing the caret: handle on mousedown + preventDefault */
   tblBar.addEventListener('mousedown',e=>{
