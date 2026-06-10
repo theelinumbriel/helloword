@@ -182,6 +182,8 @@
   .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
   .status-bar .si{display:flex;align-items:center;gap:5px;padding:0 6px;height:100%;cursor:default}
   .status-bar .si:hover{background:rgba(255,255,255,.12)}
+  .status-bar .mode-toggle{cursor:pointer}
+  #modeMenu{top:auto;bottom:26px;min-width:230px}
   .status-bar .spacer{flex:1}
   .status-bar .vbtn{background:transparent;border:none;color:#fff;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:2px}
   .status-bar .vbtn:hover{background:rgba(255,255,255,.16)}
@@ -355,6 +357,7 @@
     <span class="si" id="charStat">0 characters</span>
     <span class="si">English (United States)</span>
     <span class="si" id="saveStat">Autosaved</span>
+    <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
     <span class="si" id="buildTag" style="opacity:.6">build 9</span>
     <span class="spacer"></span>
     <button class="vbtn" title="Read Mode">📖</button>
@@ -377,6 +380,12 @@
     <button data-cmd="saveas"><span class="ic">🗂️</span> Save As… <span style="opacity:.5;margin-left:auto">Ctrl+⇧+S</span></button>
     <button data-cmd="exporthtml"><span class="ic">🌐</span> Export as HTML</button>
     <button data-cmd="print"><span class="ic">🖨️</span> Print</button>
+  </div>
+
+  <!-- MODE MENU -->
+  <div class="filemenu hidden" id="modeMenu" style="left:auto">
+    <button data-mode="enriched"><span class="ic">✦</span> Enriched <span style="opacity:.5;margin-left:auto">rich formatting saved</span></button>
+    <button data-mode="basic"><span class="ic">≡</span> Basic <span style="opacity:.5;margin-left:auto">plain Markdown</span></button>
   </div>
 
   <!-- BULLET LIBRARY -->
@@ -418,6 +427,9 @@
   const fileInput=document.getElementById('fileInput');
   const saveStat=document.getElementById('saveStat');
   const fileMenu=document.getElementById('fileMenu');
+  const modeToggle=document.getElementById('modeToggle');
+  const modeMenu=document.getElementById('modeMenu');
+  let docMode='enriched';
   const STORAGE='wordlike.doc.v2';
   let fileHandle=null;            // the .md file we're editing (File System Access API)
   const HAS_FS=!!window.showSaveFilePicker;   // Chrome/Edge on http(s)/localhost
@@ -436,6 +448,18 @@
   function closeFileMenu(){ fileMenu.classList.add('hidden'); }
   document.addEventListener('click',e=>{ if(!e.target.closest('#fileMenu')&&!e.target.closest('[data-tab="file"]'))closeFileMenu(); });
   fileMenu.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){closeFileMenu();handleCmd(b.dataset.cmd);} });
+
+  function renderMode(){ modeToggle.textContent='Mode: '+(docMode==='enriched'?'Enriched':'Basic')+' ▾'; }
+  function setMode(mode, silent){
+    if(mode!=='enriched'&&mode!=='basic') return;
+    if(mode==='basic' && docMode!=='basic' && !silent){
+      if(!confirm("Basic saves plain Markdown so colors/sizes/alignment won't be stored in the file.")) return;
+    }
+    docMode=mode; renderMode(); sync();
+  }
+  modeToggle.addEventListener('click',e=>{ e.stopPropagation(); closeFileMenu(); modeMenu.classList.toggle('hidden'); });
+  modeMenu.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; modeMenu.classList.add('hidden'); setMode(b.dataset.mode); });
+  document.addEventListener('click',e=>{ if(!e.target.closest('#modeMenu')&&!e.target.closest('#modeToggle')) modeMenu.classList.add('hidden'); });
 
   /* RIBBON BUTTONS */
   document.getElementById('ribbon').addEventListener('click',e=>{
@@ -993,13 +1017,16 @@
     }
   });
 
+  renderMode();
   restore();ensureBlock();updateActive();editor.focus();
   window.HW = {
     checksum: hwChecksum,
     b64encode: hwB64Encode,
     b64decode: hwB64Decode,
     composeFileText: composeFileText,
-    parseFileText: parseFileText
+    parseFileText: parseFileText,
+    getMode: ()=>docMode,
+    setMode: setMode
   };
 })();
 </script>
