@@ -953,6 +953,13 @@
   function hwB64Decode(b64){
     return decodeURIComponent(escape(atob(b64)));
   }
+  const HW_MARK_PREFIX = "<!-- helloword:v1 ";
+  const HW_MARK_SUFFIX = " -->";
+  function composeFileText(cleanMd, html, name, mode){
+    if(mode!=="enriched") return cleanMd;
+    const payload = JSON.stringify({ v:1, html: html, srcChecksum: hwChecksum(cleanMd), name: name||"" });
+    return cleanMd + "\n\n" + HW_MARK_PREFIX + hwB64Encode(payload) + HW_MARK_SUFFIX + "\n";
+  }
 
   /* paste plain text */
   editor.addEventListener('paste',e=>{
@@ -973,7 +980,8 @@
   window.HW = {
     checksum: hwChecksum,
     b64encode: hwB64Encode,
-    b64decode: hwB64Decode
+    b64decode: hwB64Decode,
+    composeFileText: composeFileText
   };
 })();
 </script>
