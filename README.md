@@ -2,6 +2,8 @@
 
 > *Hello, World → Hello, Word.* 👋
 
+**▶ Try it live: https://theelinumbriel.github.io/helloword/**
+
 Microsoft Word, basically — but every document saves as clean **Markdown** (`.md`).
 It's a single HTML file. No install, no build step, no internet connection required.
 
@@ -30,8 +32,8 @@ Download or clone this repo, then **double-click `index.html`**. That's it.
 It opens in your browser and works completely offline.
 
 ```bash
-git clone https://github.com/<your-username>/md_editor.git
-cd md_editor
+git clone https://github.com/theelinumbriel/helloword.git
+cd helloword
 open index.html       # macOS
 # xdg-open index.html # Linux
 # start index.html    # Windows
