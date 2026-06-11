@@ -651,26 +651,29 @@
     editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
     const sel=window.getSelection(); let saved=null;
     if(sel&&sel.rangeCount&&editor.contains(sel.anchorNode)){ const r=sel.getRangeAt(0); saved={sc:r.startContainer,so:r.startOffset,ec:r.endContainer,eo:r.endOffset}; }
-    const blocks=[...editor.children].filter(n=>n.nodeType===1&&!n.classList.contains('hw-pagebreak'));
     let used=0;
-    blocks.forEach(b=>{
-      const cs=getComputedStyle(b); const h=b.offsetHeight+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
-      if(used>0&&used+h>CONTENT_H){
-        const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false');
-        sp.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px';
-        editor.insertBefore(sp,b);
-        used=h;
-      } else { used+=h; }
-      if(h>CONTENT_H){ used=0; }
-    });
+    const blockH=el=>{ const cs=getComputedStyle(el); return el.offsetHeight+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0); };
+    const mkSpacer=h=>{ const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false'); sp.style.height=h+'px'; return sp; };
+    // Place items into pages; for a list taller than a page, recurse so it breaks between <li> (never mid-bullet).
+    function place(items, container){
+      items.forEach(el=>{
+        if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) return;
+        const h=blockH(el);
+        if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); return; }
+        if(used>0 && used+h>CONTENT_H){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=h; }
+        else { used+=h; }
+        if(h>CONTENT_H){ used=0; }   // a single non-list block taller than a page: accepted limitation
+      });
+    }
+    place([...editor.children], editor);
     if(saved){ try{ const r=document.createRange(); r.setStart(saved.sc,saved.so); r.setEnd(saved.ec,saved.eo); sel.removeAllRanges(); sel.addRange(r); }catch(_){} }
     renderSheets();
     repaginating=false;
     updatePageCount();
   }
   function renderSheets(){
-    const totalH=editor.scrollHeight;
-    const pages=Math.max(1,Math.ceil(totalH/PAGE_H));
+    // Each spacer advances content by exactly one (PAGE_H+GAP) stride, so page count = spacers + 1.
+    const pages=Math.max(1, editor.querySelectorAll('.hw-pagebreak').length + 1);
     let html=''; for(let i=0;i<pages;i++){ html+='<div class="sheet" style="top:'+(i*(PAGE_H+GAP))+'px"></div>'; }
     pageBg.innerHTML=html;
     pageBg.style.height=(pages*(PAGE_H+GAP)-GAP)+'px';
