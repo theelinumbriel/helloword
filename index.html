@@ -189,6 +189,16 @@
   .page ul.task,.page ul.task ul{list-style:none}
   .page ul.task>li{list-style:none;margin-left:-.25in}
 
+  /* ============ PAGE LAYOUT / PAGELESS ============ */
+  .page-bg{position:absolute;top:24px;left:50%;transform:translateX(-50%);transform-origin:top center;pointer-events:none;z-index:0}
+  .page-bg .sheet{position:absolute;left:0;width:8.5in;height:11in;background:#fff;box-shadow:0 0 0 1px #d0d0d0,0 3px 10px rgba(0,0,0,.16)}
+  .stage.pagemode{position:relative}
+  .stage.pagemode .page{background:transparent;box-shadow:none;min-height:11in;position:relative;z-index:1}
+  .hw-pagebreak{height:0;border:none;margin:0;padding:0;background:transparent;user-select:none}
+  .stage.pagemode .hw-pagebreak{display:block}
+  .stage:not(.pagemode) .hw-pagebreak{display:none}
+  button.big.active{background:#cfe0f7;border-color:#9db8e0}
+
   /* ============ STATUS BAR ============ */
   .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
   .status-bar .si{display:flex;align-items:center;gap:5px;padding:0 6px;height:100%;cursor:default}
@@ -441,6 +451,7 @@
 
     <!-- VIEW -->
     <div class="ribbon-panel" data-panel="view">
+      <div class="rgroup"><div class="rgroup-body"><button class="big" data-view="page"><span class="ic">📄</span><span class="cap">Print Layout</span></button><button class="big" data-view="pageless"><span class="ic">📃</span><span class="cap">Pageless</span></button></div><div class="rgroup-label">Views</div></div>
       <div class="rgroup"><div class="rgroup-body"><button class="big" data-cmd="zoomreset"><span class="ic">🔍</span><span class="cap">100%</span></button><button class="big" data-cmd="zoomin"><span class="ic">➕</span><span class="cap">Zoom In</span></button><button class="big" data-cmd="zoomout"><span class="ic">➖</span><span class="cap">Zoom Out</span></button></div><div class="rgroup-label">Zoom</div></div>
     </div>
   </div>
@@ -600,6 +611,77 @@
   const HAS_FS=!!window.showSaveFilePicker;   // Chrome/Edge on http(s)/localhost
   try{document.execCommand('styleWithCSS',false,true);}catch(_){}
 
+  /* ===== PAGE LAYOUT / PAGELESS ===== */
+  const PX=96; // 1in in CSS px
+  const PAGE_H=11*PX, CONTENT_H=9*PX, GAP=Math.round(0.35*PX), SIDEGAP_EXTRA=2*PX+GAP;
+  let viewMode='page';
+  let repaginating=false;
+
+  // Create background sheets layer
+  const pageBg=document.createElement('div');
+  pageBg.className='page-bg'; pageBg.id='pageBg'; pageBg.setAttribute('aria-hidden','true');
+  (function(){ const stage=document.getElementById('stage'); stage.insertBefore(pageBg,stage.firstChild); })();
+
+  function paginatePlan(heights,H){
+    const breaks=[]; let used=0;
+    for(let i=0;i<heights.length;i++){
+      const h=heights[i];
+      if(used>0 && used+h>H){ breaks.push(i); used=h; }
+      else { used+=h; }
+      if(h>H){ used=H+1; } // oversized: force break before next block
+    }
+    return breaks;
+  }
+
+  let _paginateTimer=null;
+  function schedulePaginate(){ clearTimeout(_paginateTimer); _paginateTimer=setTimeout(repaginate,250); }
+
+  function repaginate(){
+    if(viewMode!=='page'){ return; }
+    repaginating=true;
+    editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    const sel=window.getSelection(); let saved=null;
+    if(sel&&sel.rangeCount&&editor.contains(sel.anchorNode)){ const r=sel.getRangeAt(0); saved={sc:r.startContainer,so:r.startOffset,ec:r.endContainer,eo:r.endOffset}; }
+    const blocks=[...editor.children].filter(n=>n.nodeType===1&&!n.classList.contains('hw-pagebreak'));
+    let used=0;
+    blocks.forEach(b=>{
+      const cs=getComputedStyle(b); const h=b.offsetHeight+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
+      if(used>0&&used+h>CONTENT_H){
+        const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false');
+        sp.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px';
+        editor.insertBefore(sp,b);
+        used=h;
+      } else { used+=h; }
+      if(h>CONTENT_H){ used=0; }
+    });
+    if(saved){ try{ const r=document.createRange(); r.setStart(saved.sc,saved.so); r.setEnd(saved.ec,saved.eo); sel.removeAllRanges(); sel.addRange(r); }catch(_){} }
+    renderSheets();
+    repaginating=false;
+    updatePageCount();
+  }
+  function renderSheets(){
+    const totalH=editor.scrollHeight;
+    const pages=Math.max(1,Math.ceil(totalH/PAGE_H));
+    let html=''; for(let i=0;i<pages;i++){ html+='<div class="sheet" style="top:'+(i*(PAGE_H+GAP))+'px"></div>'; }
+    pageBg.innerHTML=html;
+    pageBg.style.height=(pages*(PAGE_H+GAP)-GAP)+'px';
+  }
+  function updatePageCount(){
+    const pages=pageBg.querySelectorAll('.sheet').length||1;
+    const ps=document.getElementById('pageStat'); if(ps) ps.textContent='Page 1 of '+pages;
+  }
+  function setViewMode(mode){
+    viewMode=(mode==='pageless')?'pageless':'page';
+    const stage=document.getElementById('stage');
+    stage.classList.toggle('pagemode',viewMode==='page');
+    if(viewMode==='page'){ repaginate(); }
+    else { editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove()); pageBg.innerHTML=''; }
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===viewMode));
+    saveSettings();
+  }
+  window.addEventListener('resize',(function(){ let _rt=null; return function(){ clearTimeout(_rt); _rt=setTimeout(repaginate,250); }; })());
+  editor.addEventListener('input',()=>{ if(!repaginating) schedulePaginate(); });
+
   /* TAB SWITCHING */
   document.getElementById('ribbonTabs').addEventListener('click',e=>{
     const tab=e.target.closest('.tab'); if(!tab)return;
@@ -629,6 +711,7 @@
   /* RIBBON BUTTONS */
   document.getElementById('ribbon').addEventListener('click',e=>{
     const b=e.target.closest('button,.style-card'); if(!b)return;
+    if(b.dataset.view){ setViewMode(b.dataset.view); return; }
     if(b.classList.contains('style-card')){ applyStyle(b.dataset.style); return; }
     if(b.dataset.cmd==='bulletlib'||b.dataset.cmd==='numberlib'){ openListLib(b.dataset.cmd,b); return; }
     if(b.dataset.cmd==='hlpalette'||b.dataset.cmd==='fcpalette'){ openPalette(b.dataset.cmd,b); return; }
@@ -682,7 +765,7 @@
   const zoomRange=document.getElementById('zoomRange'), zoomVal=document.getElementById('zoomVal');
   let zoom=100;
   zoomRange.addEventListener('input',()=>setZoom(+zoomRange.value));
-  function setZoom(z){ zoom=Math.max(50,Math.min(200,z)); editor.style.transform='scale('+(zoom/100)+')'; zoomRange.value=zoom; zoomVal.textContent=zoom+'%'; }
+  function setZoom(z){ zoom=Math.max(50,Math.min(200,z)); editor.style.transform='scale('+(zoom/100)+')'; zoomRange.value=zoom; zoomVal.textContent=zoom+'%'; var pgBg=document.getElementById('pageBg'); if(pgBg) pgBg.style.transform='translateX(-50%) scale('+(zoom/100)+')'; schedulePaginate(); }
 
   function applyStyle(style){
     editor.focus();
@@ -1230,8 +1313,10 @@
     const words=text?text.split(/\s+/).filter(Boolean).length:0;
     document.getElementById('wordStat').textContent=words+(words===1?' word':' words');
     document.getElementById('charStat').textContent=text.length+' characters';
-    const ph=Math.max(1,Math.ceil((editor.scrollHeight||0)/(11*96)));
-    document.getElementById('pageStat').textContent='Page 1 of '+ph;
+    if(typeof viewMode==='undefined'||viewMode!=='page'){
+      const ph=Math.max(1,Math.ceil((editor.scrollHeight||0)/(11*96)));
+      document.getElementById('pageStat').textContent='Page 1 of '+ph;
+    }
   }
 
   /* AUTOSAVE */
@@ -1250,6 +1335,7 @@
     try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;if(d.mode==='basic'||d.mode==='enriched'){docMode=d.mode;}}}catch(_){}
     document.title=(docName.textContent.trim()||'Document1')+' - helloword';updateCounts();
     renderMode();
+    if(viewMode==='page') repaginate();
   }
   function flushAutosave(){ localStorage.setItem(STORAGE,JSON.stringify({name:docName.textContent.trim()||'Document1',html:editor.innerHTML,mode:docMode})); }
   function newDoc(){
@@ -1329,6 +1415,7 @@
     docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
     document.title=docName.textContent+' - helloword';
     editor.focus();ensureBlock();sync();
+    if(viewMode==='page') repaginate();
     if(parsed.stale){
       const msg='External edits detected, opened as Basic';
       saveStat.textContent=msg;
@@ -1343,8 +1430,8 @@
   // strip any existing "YYYYMMDD[ HHMMSS ±HHMM]" prefix so it doesn't stack on re-save
   function cleanTitle(s){return (s||'').replace(/^\d{8}(\s+\d{6}\s+[+-]\d{4})?\s+/,'').replace(/\.md$/i,'').trim()||'Document1';}
   function stampedName(){const base=cleanTitle(docName.textContent).replace(/[\/\\:*?"<>|]/g,'-');return (stampDate?stampPrefix(new Date())+' ':'')+base+'.md';}
-  function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');if(typeof s.stampDate==='boolean')stampDate=s.stampDate;if(Array.isArray(s.googleFonts)){googleFonts=s.googleFonts.slice();googleFonts.forEach(loadGoogleFont);}}catch(_){}}
-  function saveSettings(){try{localStorage.setItem(SETTINGS,JSON.stringify({stampDate:stampDate,googleFonts:googleFonts}));}catch(_){}}
+  function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');if(typeof s.stampDate==='boolean')stampDate=s.stampDate;if(Array.isArray(s.googleFonts)){googleFonts=s.googleFonts.slice();googleFonts.forEach(loadGoogleFont);}if(s.viewMode==='pageless'||s.viewMode==='page')viewMode=s.viewMode;}catch(_){}}
+  function saveSettings(){try{localStorage.setItem(SETTINGS,JSON.stringify({stampDate:stampDate,googleFonts:googleFonts,viewMode:viewMode}));}catch(_){}}
   function renderDateCheck(){const el=document.getElementById('dateCheck');if(el)el.textContent=stampDate?'✓':'';}
 
   /* SAVE — overwrites the SAME file every time (no Downloads duplicates) */
@@ -1392,6 +1479,7 @@
     parent.childNodes.forEach(node=>{
       if(node.nodeType===3){const t=node.textContent.trim();if(t)out.push(indent+inline(node).trim(),'');return;}
       if(node.nodeType!==1)return;
+      if(node.classList && node.classList.contains('hw-pagebreak'))return;
       if(node.classList && node.classList.contains('hw-toc')){
         node.querySelectorAll('.hw-toc-list li').forEach(li=>{ const a=li.querySelector('a'); if(a){ const indent2=' '.repeat(Math.max(0,parseInt(li.style.marginLeft)||0)/16*2); out.push(indent+indent2+'- ['+a.textContent+'](#'+(a.getAttribute('href')||'').replace(/^#/,'')+')'); } });
         out.push(''); return;
@@ -1558,7 +1646,9 @@
   function composeCurrentFileText(){
     const md = htmlToMd(editor);
     const name = (docName.textContent.trim()||'Document1');
-    return composeFileText(md, editor.innerHTML, name, docMode);
+    const cleanNode = editor.cloneNode(true);
+    cleanNode.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    return composeFileText(md, cleanNode.innerHTML, name, docMode);
   }
 
   const HW_PAYLOAD_RE = /\n*<!--\s*helloword:v1\s+([A-Za-z0-9+/=]+)\s*-->\s*$/;
@@ -1869,9 +1959,13 @@
 
   renderMode();
   loadSettings();
+  setViewMode(viewMode);
   restore();ensureBlock();updateActive();editor.focus();
   renderDateCheck();
   window.HW = {
+    paginatePlan: paginatePlan,
+    repaginate: repaginate,
+    setViewMode: setViewMode,
     findMatches: findMatches,
     checksum: hwChecksum,
     b64encode: hwB64Encode,
