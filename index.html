@@ -479,7 +479,7 @@
     <span class="si">English (United States)</span>
     <span class="si" id="saveStat">Autosaved</span>
     <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
-    <span class="si" id="buildTag" style="opacity:.6">build 10</span>
+    <span class="si" id="buildTag" style="opacity:.6">build 11</span>
     <span class="spacer"></span>
     <div class="zoom">
       <button class="vbtn" data-cmd="zoomout">−</button>
@@ -1416,10 +1416,40 @@
       if(selImg){selImg.classList.remove('hw-sel');selImg=null;}
     }
   });
+  /* Faithful Markdown import via marked, reconciled to the editor's conventions */
+  function renderMarkdownFaithful(md){
+    let html;
+    try{ html = marked.parse(md, {gfm:true, breaks:false}); }
+    catch(_){ return mdToHtml(md); }                 // fall back to the built-in parser
+    const box=document.createElement('div'); box.innerHTML=html;
+    // 1) Task lists: marked emits <li><input type=checkbox>; map to the editor's ul.task + checkbox glyph
+    box.querySelectorAll('li').forEach(li=>{
+      const cb=li.querySelector('input[type="checkbox"]');
+      if(cb && li.contains(cb)){
+        const checked=cb.checked; cb.remove();
+        const ul=li.closest('ul'); if(ul) ul.classList.add('task');
+        li.insertBefore(document.createTextNode((checked?'☑':'☐')+' '), li.firstChild);
+      }
+    });
+    // 2) Math: render $...$ / $$...$$ in text (skip code/pre); strict rules so prices like "$10 and $20" aren't mathified
+    if(typeof katex!=='undefined' && typeof eqHtml==='function'){
+      const walker=document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null);
+      const targets=[]; let n;
+      while((n=walker.nextNode())){ if(n.parentElement && n.parentElement.closest('code,pre,.hw-eq')) continue; if(n.nodeValue.indexOf('$')>-1) targets.push(n); }
+      targets.forEach(t=>{
+        const s=t.nodeValue;
+        let out=s.replace(/\$\$([^$]+?)\$\$/g,(m,tex)=>eqHtml(tex.trim(),true))
+                 .replace(/\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/g,(m,tex)=>eqHtml(tex.trim(),false));
+        if(out!==s){ const span=document.createElement('span'); span.innerHTML=out; t.replaceWith(...span.childNodes); }
+      });
+    }
+    return box.innerHTML;
+  }
+
   function loadText(text,fileName){
     const parsed = parseFileText(text);
     if(parsed.html!==null){ editor.innerHTML = parsed.html; }
-    else { editor.innerHTML = mdToHtml(parsed.cleanMd); }
+    else { editor.innerHTML = renderMarkdownFaithful(parsed.cleanMd); }
     setMode(parsed.mode, true);
     docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
     document.title=docName.textContent+' - helloword';
@@ -2002,6 +2032,7 @@
     renumberFootnotes: renumberFootnotes,
     htmlToMd: htmlToMd,
     mdToHtml: mdToHtml,
+    renderMarkdownFaithful: renderMarkdownFaithful,
     eqHtml: eqHtml,
     renderEq: renderEq,
     attrEsc: attrEsc,
