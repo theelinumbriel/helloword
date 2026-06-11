@@ -217,7 +217,7 @@
   .filemenu button:hover{background:var(--word-blue-light)}
   .filemenu .ic{width:18px;text-align:center}
   .filemenu hr{border:none;border-top:1px solid #eee;margin:4px 0}
-  .hidden{display:none}
+  .hidden{display:none !important}   /* must beat element rules like .tbl-bar/.img-bar that set display:flex */
   /* ============ FIND & REPLACE DIALOG ============ */
   .find-dialog{position:fixed;top:120px;right:24px;z-index:80;background:#fff;border:1px solid #c9c9c9;box-shadow:0 6px 20px rgba(0,0,0,.22);border-radius:4px;padding:8px;width:300px;font-family:var(--ui-font)}
   .find-dialog .fd-row{display:flex;align-items:center;gap:4px;margin-bottom:6px}
