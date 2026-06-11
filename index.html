@@ -1190,6 +1190,24 @@
     const r=document.createRange();r.selectNodeContents(p);r.collapse(true);
     const s=window.getSelection();s.removeAllRanges();s.addRange(r);
   }
+  // Convert a top-level list item into a normal paragraph in place, keeping its text and
+  // splitting the list so items above stay listed and items below continue as a new list.
+  function itemToParagraph(li){
+    const list=li.closest('ul,ol'); if(!list) return;
+    const tag=list.tagName.toLowerCase();
+    const after=[]; let sib=li.nextElementSibling; while(sib){ after.push(sib); sib=sib.nextElementSibling; }
+    const p=document.createElement('p'); const nested=[];
+    [...li.childNodes].forEach(c=>{ if(c.nodeType===1&&/^(UL|OL)$/.test(c.tagName)) nested.push(c); else p.appendChild(c); });
+    if(p.firstChild&&p.firstChild.nodeType===3) p.firstChild.textContent=p.firstChild.textContent.replace(/^[☐☑✓]\s?/,'');
+    if(!p.firstChild) p.innerHTML='<br>';
+    list.parentNode.insertBefore(p, list.nextSibling);
+    nested.forEach(nl=>{ p.parentNode.insertBefore(nl, p.nextSibling); });
+    if(after.length){ const nl=document.createElement(tag); if(list.className) nl.className=list.className; after.forEach(it=>nl.appendChild(it)); p.parentNode.insertBefore(nl, p.nextSibling); }
+    li.remove();
+    if(!list.querySelector('li')) list.remove();
+    const r=document.createRange(); r.selectNodeContents(p); r.collapse(true);
+    const s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
   editor.addEventListener('keydown',e=>{
     const li=liOf();
     // TAB: nest / un-nest inside lists; tab character elsewhere
@@ -1210,9 +1228,12 @@
       else exitList(li);
       sync();return;
     }
-    // BACKSPACE at the very start of an empty top-level item: leave the list
-    if(e.key==='Backspace'&&li&&liIsEmpty(li)&&caretAtStart(li)&&listDepth(li)===1){
-      e.preventDefault();exitList(li);sync();return;
+    // BACKSPACE at the start of a list item: turn that bullet back into a normal paragraph
+    if(e.key==='Backspace'&&li&&caretAtStart(li)){
+      e.preventDefault();
+      itemToParagraph(li);
+      sync(); if(viewMode==='page') repaginate();
+      return;
     }
   });
   // Keep the .task class (and ☐ prefix) on sublists created by indenting
