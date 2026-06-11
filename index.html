@@ -190,8 +190,8 @@
   .page ul.task>li{list-style:none;margin-left:-.25in}
 
   /* ============ PAGE LAYOUT / PAGELESS ============ */
-  .page-bg{position:absolute;top:24px;left:50%;transform:translateX(-50%);transform-origin:top center;pointer-events:none;z-index:0}
-  .page-bg .sheet{position:absolute;left:0;width:8.5in;height:11in;background:#fff;box-shadow:0 0 0 1px #d0d0d0,0 3px 10px rgba(0,0,0,.16)}
+  .page-bg{position:absolute;top:24px;left:50%;transform:translateX(-50%);transform-origin:top center;width:8.5in;max-width:calc(100% - 32px);pointer-events:none;z-index:0}
+  .page-bg .sheet{position:absolute;left:0;right:0;width:auto;height:11in;background:#fff;box-shadow:0 0 0 1px #d0d0d0,0 3px 10px rgba(0,0,0,.16)}
   .stage.pagemode{position:relative}
   .stage.pagemode .page{background:transparent;box-shadow:none;min-height:11in;position:relative;z-index:1}
   .hw-pagebreak{height:0;border:none;margin:0;padding:0;background:transparent;user-select:none}
