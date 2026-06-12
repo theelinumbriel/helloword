@@ -194,9 +194,11 @@
   .page-bg .sheet{position:absolute;left:0;right:0;width:auto;height:11in;background:#fff;box-shadow:0 0 0 1px #d0d0d0,0 3px 10px rgba(0,0,0,.16)}
   .stage.pagemode{position:relative}
   .stage.pagemode .page{background:transparent;box-shadow:none;min-height:11in;position:relative;z-index:1}
-  .hw-pagebreak{height:0;border:none;margin:0;padding:0;background:transparent;user-select:none}
-  .stage.pagemode .hw-pagebreak{display:block}
-  .stage:not(.pagemode) .hw-pagebreak{display:none}
+  .hw-pagebreak,.hw-manual-break{height:0;border:none;margin:0;padding:0;background:transparent;user-select:none}
+  .stage.pagemode .hw-pagebreak,.stage.pagemode .hw-manual-break{display:block}
+  .stage:not(.pagemode) .hw-pagebreak,.stage:not(.pagemode) .hw-manual-break{display:none;height:0 !important}
+  /* Pageless (Web Layout): the sheet fills the window width instead of a fixed 8.5in page */
+  .stage.pagelessmode .page{width:auto;max-width:calc(100% - 64px);min-height:60vh}
   button.big.active{background:#cfe0f7;border-color:#9db8e0}
 
   /* ============ STATUS BAR ============ */
@@ -479,7 +481,7 @@
     <span class="si">English (United States)</span>
     <span class="si" id="saveStat">Autosaved</span>
     <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
-    <span class="si" id="buildTag" style="opacity:.6">build 11</span>
+    <span class="si" id="buildTag" style="opacity:.6">build 12</span>
     <span class="spacer"></span>
     <div class="zoom">
       <button class="vbtn" data-cmd="zoomout">−</button>
@@ -658,6 +660,7 @@
     function place(items, container){
       items.forEach(el=>{
         if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) return;
+        if(el.classList.contains('hw-manual-break')){ el.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px'; used=0; return; }  // forced break: fill to next page
         const h=blockH(el);
         if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); return; }
         if(used>0 && used+h>CONTENT_H){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=h; }
@@ -673,7 +676,7 @@
   }
   function renderSheets(){
     // Each spacer advances content by exactly one (PAGE_H+GAP) stride, so page count = spacers + 1.
-    const pages=Math.max(1, editor.querySelectorAll('.hw-pagebreak').length + 1);
+    const pages=Math.max(1, editor.querySelectorAll('.hw-pagebreak,.hw-manual-break').length + 1);
     let html=''; for(let i=0;i<pages;i++){ html+='<div class="sheet" style="top:'+(i*(PAGE_H+GAP))+'px"></div>'; }
     pageBg.innerHTML=html;
     pageBg.style.height=(pages*(PAGE_H+GAP)-GAP)+'px';
@@ -686,13 +689,27 @@
     viewMode=(mode==='pageless')?'pageless':'page';
     const stage=document.getElementById('stage');
     stage.classList.toggle('pagemode',viewMode==='page');
+    stage.classList.toggle('pagelessmode',viewMode==='pageless');
     if(viewMode==='page'){ repaginate(); }
-    else { editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove()); pageBg.innerHTML=''; }
+    else { editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove()); editor.querySelectorAll('.hw-manual-break').forEach(b=>b.style.height='0'); pageBg.innerHTML=''; }
     document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===viewMode));
     saveSettings();
   }
   window.addEventListener('resize',(function(){ let _rt=null; return function(){ clearTimeout(_rt); _rt=setTimeout(repaginate,250); }; })());
   editor.addEventListener('input',()=>{ if(!repaginating) schedulePaginate(); });
+  // Manual page break: forces following content onto a new page in Page Layout (no-op visually in Pageless).
+  function insertPageBreak(){
+    const html='<div class="hw-manual-break" contenteditable="false"></div><p><br></p>';
+    document.execCommand('insertHTML',false,html);
+    if(!editor.querySelector('.hw-manual-break')){   // headless / execCommand no-op fallback
+      const d=document.createElement('div'); d.className='hw-manual-break'; d.setAttribute('contenteditable','false');
+      const sel=getSelection();
+      if(sel&&sel.rangeCount){ const r=sel.getRangeAt(0); r.insertNode(d); r.setStartAfter(d); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); }
+      else editor.appendChild(d);
+    }
+    if(viewMode==='page') repaginate();
+    sync();
+  }
 
   /* TAB SWITCHING */
   document.getElementById('ribbonTabs').addEventListener('click',e=>{
@@ -854,6 +871,20 @@
     });
   }
 
+  // Advance the counter past any footnotes present in a loaded/restored document.
+  function syncFnCounter(){
+    let max=0;
+    editor.querySelectorAll('[data-fid]').forEach(el=>{ const v=parseInt(el.getAttribute('data-fid'),10)||0; if(v>max) max=v; });
+    if(max>fnCounter) fnCounter=max;
+  }
+  // True only when the set/order of references differs from the rendered list (so typing a note text doesn't trigger a rebuild).
+  function footnotesNeedRenumber(){
+    const refs=editor.querySelectorAll('sup.hw-fnref'), items=editor.querySelectorAll('.hw-fn');
+    if(refs.length!==items.length) return true;
+    for(let i=0;i<refs.length;i++){ if(refs[i].getAttribute('data-fid')!==items[i].getAttribute('data-fid')) return true; }
+    return false;
+  }
+
   function insertFootnote(){
     const k=++fnCounter;
     // Build the sup element for DOM fallback
@@ -891,9 +922,10 @@
     sync();
   }
 
-  // Auto-renumber when refs are deleted or content changes
+  // Renumber ONLY when the set of references changed (added/removed), so typing inside a
+  // footnote note doesn't rebuild the list and destroy the focused span / caret.
   editor.addEventListener('input',e=>{
-    if(editor.querySelector('sup.hw-fnref')||editor.querySelector('section.hw-footnotes')){
+    if((editor.querySelector('sup.hw-fnref')||editor.querySelector('section.hw-footnotes')) && footnotesNeedRenumber()){
       renumberFootnotes();
     }
     if(editor.querySelector('section.hw-bibliography')){
@@ -909,7 +941,7 @@
     if(input===null) return;
     let tex=input.trim(), disp=false; const m=tex.match(/^\$\$([\s\S]*)\$\$$/); if(m){tex=m[1].trim();disp=true;}
     if(!tex){ eq.remove(); sync(); return; }
-    eq.className='hw-eq'+(disp?' hw-eq-block':''); eq.setAttribute('data-tex',attrEsc(tex)); eq.setAttribute('data-display',disp?'1':'0'); eq.innerHTML=renderEq(tex,disp); sync();
+    eq.className='hw-eq'+(disp?' hw-eq-block':''); eq.setAttribute('data-tex',tex); eq.setAttribute('data-display',disp?'1':'0'); eq.innerHTML=renderEq(tex,disp); sync();
   });
 
   /* ===== CITATIONS + BIBLIOGRAPHY ===== */
@@ -924,10 +956,11 @@
   }
   function bibLine(s){ return [s.author, s.title, s.year].filter(Boolean).map(x=>String(x).trim()).join('. ') + (s.author||s.title||s.year?'.':''); }
   function insertCitation(){
-    const author=prompt('Author (e.g. Smith):')||''; if(author===null) return;
-    const title=prompt('Title (optional):')||'';
-    const year=prompt('Year (e.g. 2020):')||'';
-    const label='('+[author, year].filter(Boolean).join(', ')+')';
+    const author=prompt('Author (e.g. Smith):'); if(author===null) return;   // Cancel
+    const title=prompt('Title (optional):'); if(title===null) return;
+    const year=prompt('Year (e.g. 2020):'); if(year===null) return;
+    if(!author.trim() && !title.trim() && !year.trim()) return;               // nothing entered
+    const label='('+[author, year].filter(s=>s&&s.trim()).join(', ')+')';
     const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     const html='<span class="hw-cite" contenteditable="false" data-author="'+esc(author)+'" data-title="'+esc(title)+'" data-year="'+esc(year)+'">'+esc(label)+'</span>&nbsp;';
     document.execCommand('insertHTML',false,html);
@@ -1047,7 +1080,7 @@
       case 'quote': document.execCommand('formatBlock',false,'blockquote'); break;
       case 'codeblock': document.execCommand('formatBlock',false,'pre'); break;
       case 'hr': document.execCommand('insertHorizontalRule'); break;
-      case 'pagebreak': document.execCommand('insertHTML',false,'<hr><p><br></p>'); break;
+      case 'pagebreak': insertPageBreak(); break;
       case 'table': insertTable(); break;
       case 'image': imgInput.click(); break;
       case 'link': { const u=prompt('Link URL:','https://'); if(u)document.execCommand('createLink',false,u); break; }
@@ -1365,7 +1398,8 @@
   docName.addEventListener('input',()=>{document.title=(docName.textContent.trim()||'Document1')+' - helloword';sync();});
   docName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();editor.focus();}});
   function restore(){
-    try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=d.html;if(d.mode==='basic'||d.mode==='enriched'){docMode=d.mode;}}}catch(_){}
+    try{const raw=localStorage.getItem(STORAGE);if(raw){const d=JSON.parse(raw);if(d.name)docName.textContent=d.name;if(d.html)editor.innerHTML=sanitizeHtml(d.html);if(d.mode==='basic'||d.mode==='enriched'){docMode=d.mode;}}}catch(_){}
+    syncFnCounter();
     document.title=(docName.textContent.trim()||'Document1')+' - helloword';updateCounts();
     renderMode();
     if(viewMode==='page') repaginate();
@@ -1441,15 +1475,33 @@
     }
   });
   /* Faithful Markdown import via marked, reconciled to the editor's conventions */
+  // Strip active/dangerous content from untrusted HTML (opened .md files, enriched payloads).
+  function sanitizeNode(root){
+    const KILL=/^(SCRIPT|STYLE|IFRAME|FRAME|FRAMESET|OBJECT|EMBED|LINK|META|BASE|FORM|TEXTAREA|SELECT|APPLET|NOSCRIPT)$/;
+    root.querySelectorAll('*').forEach(el=>{
+      if(KILL.test(el.tagName)){ el.remove(); return; }
+      [...el.attributes].forEach(a=>{
+        const n=a.name.toLowerCase(), v=a.value||'';
+        if(n.startsWith('on')) el.removeAttribute(a.name);
+        else if((n==='href'||n==='src'||n==='xlink:href'||n==='formaction'||n==='action'||n==='data') && /^\s*(javascript|vbscript|data:text\/html)/i.test(v)) el.removeAttribute(a.name);
+        else if(n==='srcset') el.removeAttribute(a.name);
+        else if(n==='style' && /(expression\(|javascript:|vbscript:)/i.test(v)) el.removeAttribute(a.name);
+      });
+    });
+    return root;
+  }
+  function sanitizeHtml(html){ const t=document.createElement('template'); t.innerHTML=String(html||''); sanitizeNode(t.content); return t.innerHTML; }
+
   function renderMarkdownFaithful(md){
     let html;
     try{ html = marked.parse(md, {gfm:true, breaks:false}); }
     catch(_){ return mdToHtml(md); }                 // fall back to the built-in parser
-    const box=document.createElement('div'); box.innerHTML=html;
+    const box=document.createElement('div'); box.innerHTML=sanitizeHtml(html);  // neutralize scripts/handlers before going live
     // 1) Task lists: marked emits <li><input type=checkbox>; map to the editor's ul.task + checkbox glyph
     box.querySelectorAll('li').forEach(li=>{
-      const cb=li.querySelector('input[type="checkbox"]');
-      if(cb && li.contains(cb)){
+      // only this li's OWN checkbox (closest li is this one), never a nested child's
+      const cb=[...li.querySelectorAll('input[type="checkbox"]')].find(inp=>inp.closest('li')===li);
+      if(cb){
         const checked=cb.checked; cb.remove();
         const ul=li.closest('ul'); if(ul) ul.classList.add('task');
         li.insertBefore(document.createTextNode((checked?'☑':'☐')+' '), li.firstChild);
@@ -1472,8 +1524,9 @@
 
   function loadText(text,fileName){
     const parsed = parseFileText(text);
-    if(parsed.html!==null){ editor.innerHTML = parsed.html; }
+    if(parsed.html!==null){ editor.innerHTML = sanitizeHtml(parsed.html); }
     else { editor.innerHTML = renderMarkdownFaithful(parsed.cleanMd); }
+    syncFnCounter();
     setMode(parsed.mode, true);
     docName.textContent=fileName.replace(/\.(md|markdown|txt)$/i,'')||'Document1';
     document.title=docName.textContent+' - helloword';
@@ -1542,7 +1595,7 @@
     parent.childNodes.forEach(node=>{
       if(node.nodeType===3){const t=node.textContent.trim();if(t)out.push(indent+inline(node).trim(),'');return;}
       if(node.nodeType!==1)return;
-      if(node.classList && node.classList.contains('hw-pagebreak'))return;
+      if(node.classList && (node.classList.contains('hw-pagebreak')||node.classList.contains('hw-manual-break')))return;
       if(node.classList && node.classList.contains('hw-toc')){
         node.querySelectorAll('.hw-toc-list li').forEach(li=>{ const a=li.querySelector('a'); if(a){ const indent2=' '.repeat(Math.max(0,parseInt(li.style.marginLeft)||0)/16*2); out.push(indent+indent2+'- ['+a.textContent+'](#'+(a.getAttribute('href')||'').replace(/^#/,'')+')'); } });
         out.push(''); return;
@@ -1563,7 +1616,7 @@
         case 'h4':out.push(indent+'#### '+inline(node).trim(),'');break;
         case 'h5':out.push(indent+'##### '+inline(node).trim(),'');break;
         case 'h6':out.push(indent+'###### '+inline(node).trim(),'');break;
-        case 'p':case 'div':{const txt=inline(node).trim();if(txt)out.push(indent+txt,'');else if(tag==='div')blockChildren(node,out,indent);break;}
+        case 'p':case 'div':{let txt=inline(node).trim();if(txt){txt=txt.split('\n').map(mdEscLineStart).join('\n');out.push(indent+txt,'');}else if(tag==='div')blockChildren(node,out,indent);break;}
         case 'br':out.push('');break;
         case 'hr':out.push(indent+'---','');break;
         case 'blockquote':{const inner=[];blockChildren(node,inner,'');inner.join('\n').trim().split('\n').forEach(l=>out.push(indent+'> '+l));out.push('');break;}
@@ -1606,10 +1659,21 @@
     out.push(indent+'| '+head.map(()=>'---').join(' | ')+' |');
     rows.slice(1).forEach(r=>out.push(indent+'| '+toCells(r).join(' | ')+' |'));
   }
+  // Markdown escaping so literal prose round-trips (e.g. "# budget", "1. item", "*literal*", "[x](y)").
+  function mdEscInline(s){ return s.replace(/[\\`*_\[\]<~]/g,'\\$&'); }
+  function mdEscLineStart(s){
+    return s.replace(/^(\s*)(#{1,6}\s)/,'$1\\$2')
+            .replace(/^(\s*)(>)/,'$1\\$2')
+            .replace(/^(\s*)([-+*]\s)/,'$1\\$2')
+            .replace(/^(\s*)(\d+)([.)]\s)/,'$1$2\\$3')
+            .replace(/^(\s*)(\|)/,'$1\\$2');
+  }
+  function mdCodeSpan(t){ const m=(t.match(/`+/g)||[]).reduce((x,s)=>Math.max(x,s.length),0); const f='`'.repeat(m+1); const pad=(/^`|`$/.test(t))?' ':''; return f+pad+t+pad+f; }
+  function mdUrl(u){ return /[\s()<>]/.test(u) ? '<'+u.replace(/</g,'%3C').replace(/>/g,'%3E')+'>' : u; }
   function inline(node){let md='';node.childNodes.forEach(c=>md+=inlineNode(c));return md;}
   function inlineFromHtml(html){const tmp=document.createElement('div');tmp.innerHTML=html;return inline(tmp);}
   function inlineNode(node){
-    if(node.nodeType===3)return node.textContent.replace(/ /g,' ');
+    if(node.nodeType===3)return mdEscInline(node.textContent.replace(/ /g,' '));
     if(node.nodeType!==1)return '';
     if(node.tagName.toLowerCase()==='span' && node.classList && node.classList.contains('hw-cite')) return node.textContent;
     if(node.tagName.toLowerCase()==='span' && node.classList && node.classList.contains('hw-eq')){ const tex=node.getAttribute('data-tex')||''; return (node.getAttribute('data-display')==='1'?'$$'+tex+'$$':'$'+tex+'$'); }
@@ -1619,9 +1683,9 @@
       case 'em':case 'i':{const t=inner();return t.trim()?'*'+t+'*':t;}
       case 'u':{const t=inner();return t.trim()?'<u>'+t+'</u>':t;}
       case 's':case 'strike':case 'del':{const t=inner();return t.trim()?'~~'+t+'~~':t;}
-      case 'code':return '`'+node.textContent+'`';
-      case 'a':return '['+inner()+']('+(node.getAttribute('href')||'')+')';
-      case 'img':return `![${node.alt||''}](${node.getAttribute('src')||''})`;
+      case 'code':return mdCodeSpan(node.textContent);
+      case 'a':return '['+inner()+']('+mdUrl(node.getAttribute('href')||'')+')';
+      case 'img':return '!['+mdEscInline(node.alt||'')+']('+mdUrl(node.getAttribute('src')||'')+')';
       case 'br':return '  \n';
       case 'sup':if(node.classList&&node.classList.contains('hw-fnref')){const a=node.querySelector('a');const n=(a?a.textContent:'').replace(/[^0-9]/g,'');return '[^'+n+']';}return inner();
       default:return inner();
@@ -1846,19 +1910,25 @@
 
   function replaceAllMatches(){
     const q=findInput.value; if(!q) return;
-    const mc=findCase.checked;
+    const rep=replaceInput.value, mc=findCase.checked;
+    // Replace within each text node's ORIGINAL string in a single left-to-right pass, so a
+    // replacement that contains the query (e.g. a -> aa) is never re-matched.
+    const walker=document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+    const nodes=[]; let t;
+    while((t=walker.nextNode())){ if(t.parentElement && t.parentElement.closest('.hw-eq,.hw-pagebreak,code,pre')) continue; nodes.push(t); }
     let n=0;
-    let ranges=buildRangesPerTextNode(q,mc);
-    while(ranges.length){
-      const r=ranges[0];
-      r.deleteContents();
-      r.insertNode(document.createTextNode(replaceInput.value));
-      n++;
-      ranges=buildRangesPerTextNode(q,mc);
-      if(n>5000) break;
-    }
+    nodes.forEach(node=>{
+      const s=node.nodeValue;
+      const hay=mc?s:s.toLowerCase(), needle=mc?q:q.toLowerCase();
+      if(hay.indexOf(needle)===-1) return;
+      let out='', i=0, p;
+      while((p=hay.indexOf(needle,i))!==-1){ out+=s.slice(i,p)+rep; i=p+needle.length; n++; }
+      out+=s.slice(i);
+      node.nodeValue=out;
+    });
     sync();
     runFind();
+    return n;
   }
 
   function openFind(showReplace){

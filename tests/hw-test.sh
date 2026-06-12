@@ -4,7 +4,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-TMP="$(mktemp /tmp/hwtest.XXXXXX.html)"
+# Trailing X's so BSD/GNU mktemp both randomize, then add the .html suffix Chrome needs.
+TMP="$(mktemp "${TMPDIR:-/tmp}/hwtest.XXXXXXXX")"
+mv "$TMP" "$TMP.html"; TMP="$TMP.html"
 trap 'rm -f "$TMP"' EXIT
 cp "$ROOT/index.html" "$TMP"
 # Append test bootstrap. Runs after the app's own load handlers so our title wins.
