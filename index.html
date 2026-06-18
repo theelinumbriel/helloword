@@ -202,15 +202,23 @@
   button.big.active{background:#cfe0f7;border-color:#9db8e0}
 
   /* ============ STATUS BAR ============ */
-  .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none}
-  .status-bar .si{display:flex;align-items:center;gap:5px;padding:0 6px;height:100%;cursor:default}
+  .status-bar{background:var(--word-blue);color:#fff;height:24px;display:flex;align-items:center;padding:0 6px;gap:16px;font-size:12px;user-select:none;flex-wrap:nowrap;overflow:hidden}
+  /* Left labels live in a clipping group so they can never wrap (bleeding upward over the page) or push the zoom controls off-screen. */
+  .status-bar .si-group{display:flex;align-items:center;gap:16px;height:100%;flex:1 1 auto;min-width:0;overflow:hidden}
+  .status-bar .si{display:flex;align-items:center;gap:5px;padding:0 6px;height:100%;cursor:default;white-space:nowrap;flex:0 0 auto}
   .status-bar .si:hover{background:rgba(255,255,255,.12)}
   .status-bar .mode-toggle{cursor:pointer}
   #modeMenu{top:auto;bottom:26px;min-width:230px}
-  .status-bar .spacer{flex:1}
   .status-bar .vbtn{background:transparent;border:none;color:#fff;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:2px}
   .status-bar .vbtn:hover{background:rgba(255,255,255,.16)}
-  .zoom{display:flex;align-items:center;gap:8px}
+  /* As the window narrows, drop the lowest-value labels (whole items, not partial) so the zoom controls stay reachable. */
+  @media (max-width:1000px){ #buildTag{display:none} }
+  @media (max-width:900px){ #langStat{display:none} }
+  @media (max-width:780px){ #saveStat{display:none} }
+  @media (max-width:680px){ #charStat{display:none} }
+  @media (max-width:560px){ #modeToggle{display:none} }
+  @media (max-width:640px){ .zoom input[type=range]{width:70px} }   /* a touch narrower so the % label keeps a margin at small widths */
+  .zoom{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .zoom input[type=range]{width:90px;accent-color:#fff}
   .zoom .zval{width:38px;text-align:right}
 
@@ -475,14 +483,15 @@
 
   <!-- STATUS BAR -->
   <div class="status-bar">
-    <span class="si" id="pageStat">Page 1 of 1</span>
-    <span class="si" id="wordStat">0 words</span>
-    <span class="si" id="charStat">0 characters</span>
-    <span class="si">English (United States)</span>
-    <span class="si" id="saveStat">Autosaved</span>
-    <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
-    <span class="si" id="buildTag" style="opacity:.6">build 12</span>
-    <span class="spacer"></span>
+    <div class="si-group">
+      <span class="si" id="pageStat">Page 1 of 1</span>
+      <span class="si" id="wordStat">0 words</span>
+      <span class="si" id="charStat">0 characters</span>
+      <span class="si" id="langStat">English (United States)</span>
+      <span class="si" id="saveStat">Autosaved</span>
+      <span class="si mode-toggle" id="modeToggle" title="Document fidelity mode">Mode: Enriched ▾</span>
+      <span class="si" id="buildTag" style="opacity:.6">build 12</span>
+    </div>
     <div class="zoom">
       <button class="vbtn" data-cmd="zoomout">−</button>
       <input type="range" id="zoomRange" min="50" max="200" value="100" step="10">
@@ -626,6 +635,7 @@
   const PX=96; // 1in in CSS px
   const PAGE_H=11*PX, CONTENT_H=9*PX, GAP=Math.round(0.35*PX), SIDEGAP_EXTRA=2*PX+GAP;
   let viewMode='page';
+  let autoFit=true;   // auto-zoom the page to fill the window width (Word-style "fit width"); a manual zoom turns this off
   let repaginating=false;
 
   // Create background sheets layer
@@ -690,12 +700,12 @@
     const stage=document.getElementById('stage');
     stage.classList.toggle('pagemode',viewMode==='page');
     stage.classList.toggle('pagelessmode',viewMode==='pageless');
-    if(viewMode==='page'){ repaginate(); }
-    else { editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove()); editor.querySelectorAll('.hw-manual-break').forEach(b=>b.style.height='0'); pageBg.innerHTML=''; }
+    if(viewMode==='page'){ repaginate(); applyFitWidth(); }
+    else { editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove()); editor.querySelectorAll('.hw-manual-break').forEach(b=>b.style.height='0'); pageBg.innerHTML=''; setZoom(100,true); }
     document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===viewMode));
     saveSettings();
   }
-  window.addEventListener('resize',(function(){ let _rt=null; return function(){ clearTimeout(_rt); _rt=setTimeout(repaginate,250); }; })());
+  window.addEventListener('resize',(function(){ let _rt=null; return function(){ clearTimeout(_rt); _rt=setTimeout(function(){ applyFitWidth(); repaginate(); },250); }; })());
   editor.addEventListener('input',()=>{ if(!repaginating) schedulePaginate(); });
   // Manual page break: forces following content onto a new page in Page Layout (no-op visually in Pageless).
   function insertPageBreak(){
@@ -794,7 +804,26 @@
   const zoomRange=document.getElementById('zoomRange'), zoomVal=document.getElementById('zoomVal');
   let zoom=100;
   zoomRange.addEventListener('input',()=>setZoom(+zoomRange.value));
-  function setZoom(z){ zoom=Math.max(50,Math.min(200,z)); editor.style.transform='scale('+(zoom/100)+')'; zoomRange.value=zoom; zoomVal.textContent=zoom+'%'; var pgBg=document.getElementById('pageBg'); if(pgBg) pgBg.style.transform='translateX(-50%) scale('+(zoom/100)+')'; schedulePaginate(); }
+  function setZoom(z, fromFit){
+    if(!fromFit) autoFit=false;   // an explicit zoom (slider / +/− / 100%) opts out of fit-width
+    zoom=Math.max(50,Math.min(200,z));
+    const f=zoom/100;
+    editor.style.transform='scale('+f+')';
+    var pgBg=document.getElementById('pageBg'); if(pgBg) pgBg.style.transform='translateX(-50%) scale('+f+')';
+    var track=document.querySelector('.ruler .track'); if(track) track.style.transform='scaleX('+f+')';  // keep the ruler aligned with the scaled page
+    zoomRange.value=zoom; zoomVal.textContent=zoom+'%';
+    schedulePaginate();
+  }
+  // Fit the real 8.5in page to the window width by zooming (layout/margins/print stay untouched).
+  function computeFitZoom(){
+    const stage=document.getElementById('stage');
+    if(!stage) return 100;
+    const pageW=8.5*PX;                     // 816px — true Letter width
+    const avail=stage.clientWidth-48;       // leave a gutter so the page never touches the edge / scrollbar
+    if(avail<=0) return 100;
+    return Math.max(50,Math.min(200,Math.floor(avail/pageW*100)));
+  }
+  function applyFitWidth(){ if(autoFit && viewMode==='page') setZoom(computeFitZoom(), true); }
 
   function applyStyle(style){
     editor.focus();
@@ -2094,6 +2123,7 @@
   loadSettings();
   setViewMode(viewMode);
   restore();ensureBlock();updateActive();editor.focus();
+  applyFitWidth();
   renderDateCheck();
   window.HW = {
     paginatePlan: paginatePlan,
