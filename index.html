@@ -1463,6 +1463,18 @@
     r.readAsText(file);fileInput.value='';
   });
 
+  /* OPEN VIA SERVER — used by Finder "Open With HelloWord" (launch.command adds ?open=<abs path>). */
+  function fileBasename(p){ return String(p||'').split(/[\\/]/).pop(); }
+  function applyOpenedText(text, path){ loadText(text, fileBasename(path)); }
+  async function openFromServer(path){
+    try{
+      const res=await fetch('/__open?path='+encodeURIComponent(path));
+      if(!res.ok){ saveStat.textContent='Could not open file'; return false; }
+      applyOpenedText(await res.text(), path);
+      return true;
+    }catch(_){ saveStat.textContent='Could not open file'; return false; }
+  }
+
   /* ===== IMAGE INSERT (base64 data URI) ===== */
   imgInput.addEventListener('change',e=>{
     const f=e.target.files[0]; if(!f) return;
@@ -2124,6 +2136,7 @@
   setViewMode(viewMode);
   restore();ensureBlock();updateActive();editor.focus();
   applyFitWidth();
+  (function(){ try{ var op=new URLSearchParams(location.search).get('open'); if(op) openFromServer(op); }catch(_){} })();
   renderDateCheck();
   window.HW = {
     paginatePlan: paginatePlan,
@@ -2139,6 +2152,9 @@
     setMode: setMode,
     composeCurrentFileText: composeCurrentFileText,
     loadText: loadText,
+    fileBasename: fileBasename,
+    applyOpenedText: applyOpenedText,
+    openFromServer: openFromServer,
     flushAutosave: flushAutosave,
     stampedName: ()=>stampedName(),
     setStampDate: (v)=>{stampDate=!!v;},
