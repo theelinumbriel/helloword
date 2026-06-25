@@ -691,6 +691,40 @@
     cont.appendChild(cbody);
     return cont;
   }
+  // Code blocks: stitch continuation <pre> fragments back into one (join the code with newlines).
+  function mergeSplitPres(root){
+    root.querySelectorAll('pre.hw-cont').forEach(cont=>{
+      let prev=cont.previousElementSibling;
+      while(prev && prev.classList && (prev.classList.contains('hw-pagebreak')||prev.classList.contains('hw-manual-break'))){ const sp=prev; prev=prev.previousElementSibling; sp.remove(); }
+      if(prev && prev.tagName==='PRE'){
+        const pc=prev.querySelector('code')||prev, cc=cont.querySelector('code')||cont;
+        pc.textContent=pc.textContent.replace(/\n$/,'')+'\n'+cc.textContent;
+        cont.remove();
+      } else { cont.classList.remove('hw-cont'); }
+    });
+  }
+  // Move the trailing code lines that don't fit in availPx into a continuation <pre><code>.
+  function splitPreToFit(pre, availPx){
+    const codeEl=pre.querySelector('code')||pre;
+    const lines=codeEl.textContent.replace(/\n$/,'').split('\n');
+    if(lines.length<=1) return null;
+    const cs=getComputedStyle(pre);
+    const padV=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+    const bordV=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
+    const marV=(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
+    const lineH=(pre.scrollHeight-padV)/lines.length;
+    if(!(lineH>0)) return null;
+    let k=Math.floor((availPx-padV-bordV-marV)/lineH);
+    if(k<1) k=1;
+    if(k>=lines.length) return null;
+    codeEl.textContent=lines.slice(0,k).join('\n');
+    const cont=document.createElement('pre');
+    cont.className=pre.className; cont.classList.add('hw-cont');
+    const ccode=document.createElement('code'); ccode.textContent=lines.slice(k).join('\n'); cont.appendChild(ccode);
+    return cont;
+  }
+  // Undo all paginated splits (tables + code blocks) so content is canonical again.
+  function mergeSplits(root){ mergeSplitTables(root); mergeSplitPres(root); }
 
   let _paginateTimer=null;
   function schedulePaginate(){ clearTimeout(_paginateTimer); _paginateTimer=setTimeout(repaginate,250); }
@@ -699,7 +733,7 @@
     if(viewMode!=='page'){ return; }
     repaginating=true;
     editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
-    mergeSplitTables(editor);   // undo any previous split so we re-split from canonical content
+    mergeSplits(editor);   // undo any previous split so we re-split from canonical content
     const sel=window.getSelection(); let saved=null;
     if(sel&&sel.rangeCount&&editor.contains(sel.anchorNode)){ const r=sel.getRangeAt(0); saved={sc:r.startContainer,so:r.startOffset,ec:r.endContainer,eo:r.endOffset}; }
     let used=0;
@@ -728,6 +762,21 @@
             continue;
           }
           // couldn't split (single row taller than a page) — fall through (accepted limitation)
+        }
+        // A code block taller than a full page — split it between lines (header-less continuation).
+        if(el.tagName==='PRE' && h>CONTENT_H){
+          const codeEl=el.querySelector('code')||el;
+          const nLines=codeEl.textContent.replace(/\n$/,'').split('\n').length;
+          const lineH=nLines>0?(el.scrollHeight/nLines):20;
+          if(used>0 && (CONTENT_H-used) < lineH*2){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=0; }
+          const cont=splitPreToFit(el, CONTENT_H-used);
+          if(cont){
+            used+=blockH(el);
+            el.after(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), cont);
+            used=0;
+            items.splice(idx+1,0,cont);
+            continue;
+          }
         }
         if(used>0 && used+h>CONTENT_H){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=h; }
         else { used+=h; }
@@ -1871,7 +1920,7 @@
     const name = (docName.textContent.trim()||'Document1');
     const cleanNode = editor.cloneNode(true);
     cleanNode.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
-    mergeSplitTables(cleanNode);                 // stitch any paginated table fragments back into one
+    mergeSplits(cleanNode);                      // stitch any paginated table/code fragments back into one
     const md = htmlToMd(cleanNode);
     return composeFileText(md, cleanNode.innerHTML, name, docMode);
   }
