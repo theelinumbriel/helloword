@@ -56,4 +56,20 @@ R="$(bash "$H" '
 ')"
 [ "$R" = "PASS" ] || fail "code-block merge-on-save -> $R"
 
+# Paragraphs: a paragraph taller than a page splits at a word boundary, fragments fit, and the
+# full text (in order) survives a save round-trip.
+R="$(bash "$H" '
+  var ed=document.getElementById("editor");
+  var words=[]; for(var i=1;i<=1500;i++) words.push("w"+i);
+  ed.innerHTML="<p>"+words.join(" ")+"</p>"; window.HW.repaginate();
+  var CONTENT=9*96, ps=[].slice.call(ed.querySelectorAll("p"));
+  if(ps.length<2) throw new Error("paragraph did not split");
+  if(ps.filter(function(p){return p.offsetHeight>CONTENT;}).length) throw new Error("a paragraph fragment is taller than a page");
+  var body=window.HW.composeCurrentFileText().split("<!-- helloword")[0];
+  var got=(body.match(/w\d+/g)||[]);
+  if(got.length!==1500) throw new Error("saved "+got.length+" words, want 1500");
+  for(var k=1;k<=1500;k++){ if(got[k-1]!=="w"+k) throw new Error("word order broke at "+k); }
+')"
+[ "$R" = "PASS" ] || fail "paragraph split + round-trip -> $R"
+
 echo "PASS"
