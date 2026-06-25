@@ -654,6 +654,44 @@
     return breaks;
   }
 
+  // ---- Tall-block splitting across page breaks (so a big table doesn't spill past the sheet) ----
+  // A continuation fragment is marked .hw-cont. mergeSplitTables() stitches the pieces back into
+  // one table (run before each repaginate and before saving) so the document/.md stays whole.
+  function mergeSplitTables(root){
+    root.querySelectorAll('table.hw-cont').forEach(cont=>{
+      let prev=cont.previousElementSibling;
+      while(prev && prev.classList && (prev.classList.contains('hw-pagebreak')||prev.classList.contains('hw-manual-break'))){ const sp=prev; prev=prev.previousElementSibling; sp.remove(); }
+      if(prev && prev.tagName==='TABLE'){
+        let dst=prev.tBodies[0]; if(!dst){ dst=document.createElement('tbody'); prev.appendChild(dst); }
+        const src=cont.tBodies[0];
+        if(src){ while(src.firstChild) dst.appendChild(src.firstChild); }
+        cont.remove();
+      } else { cont.classList.remove('hw-cont'); }
+    });
+  }
+  // Move the trailing rows that don't fit in availPx into a new continuation <table> (repeats the
+  // header). Rows are MOVED (identity preserved, so the caret survives). Returns the continuation
+  // table (not yet inserted), or null if the whole table already fits.
+  function splitTableToFit(table, availPx){
+    const body=table.tBodies[0]; if(!body) return null;
+    const rows=[...body.rows]; if(rows.length<=1) return null;
+    const theadH=table.tHead?table.tHead.offsetHeight:0;
+    let acc=0, k=0;
+    for(; k<rows.length; k++){
+      const rh=rows[k].offsetHeight;
+      if(k>0 && theadH+acc+rh>availPx) break;   // always keep at least one row, so we make progress
+      acc+=rh;
+    }
+    if(k>=rows.length) return null;
+    const cont=document.createElement('table');
+    cont.className=table.className; cont.classList.add('hw-cont');
+    if(table.tHead) cont.appendChild(table.tHead.cloneNode(true));
+    const cbody=document.createElement('tbody');
+    for(let j=k;j<rows.length;j++) cbody.appendChild(rows[j]);
+    cont.appendChild(cbody);
+    return cont;
+  }
+
   let _paginateTimer=null;
   function schedulePaginate(){ clearTimeout(_paginateTimer); _paginateTimer=setTimeout(repaginate,250); }
 
@@ -661,6 +699,7 @@
     if(viewMode!=='page'){ return; }
     repaginating=true;
     editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    mergeSplitTables(editor);   // undo any previous split so we re-split from canonical content
     const sel=window.getSelection(); let saved=null;
     if(sel&&sel.rangeCount&&editor.contains(sel.anchorNode)){ const r=sel.getRangeAt(0); saved={sc:r.startContainer,so:r.startOffset,ec:r.endContainer,eo:r.endOffset}; }
     let used=0;
@@ -668,15 +707,32 @@
     const mkSpacer=h=>{ const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false'); sp.style.height=h+'px'; return sp; };
     // Place items into pages; for a list taller than a page, recurse so it breaks between <li> (never mid-bullet).
     function place(items, container){
-      items.forEach(el=>{
-        if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) return;
-        if(el.classList.contains('hw-manual-break')){ el.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px'; used=0; return; }  // forced break: fill to next page
+      for(let idx=0; idx<items.length; idx++){
+        const el=items[idx];
+        if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) continue;
+        if(el.classList.contains('hw-manual-break')){ el.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px'; used=0; continue; }  // forced break: fill to next page
         const h=blockH(el);
-        if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); return; }
+        if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); continue; }
+        // A table taller than a full page would spill past the sheet — split it between rows
+        // (header repeats on the continuation), filling the current page first.
+        if(el.tagName==='TABLE' && h>CONTENT_H){
+          const theadH=el.tHead?el.tHead.offsetHeight:0;
+          const firstRowH=(el.tBodies[0]&&el.tBodies[0].rows[0])?el.tBodies[0].rows[0].offsetHeight:0;
+          if(used>0 && (CONTENT_H-used) < theadH+firstRowH){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=0; }
+          const cont=splitTableToFit(el, CONTENT_H-used);
+          if(cont){
+            used+=blockH(el);
+            el.after(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), cont);
+            used=0;
+            items.splice(idx+1,0,cont);   // process the continuation next (it may split again)
+            continue;
+          }
+          // couldn't split (single row taller than a page) — fall through (accepted limitation)
+        }
         if(used>0 && used+h>CONTENT_H){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=h; }
         else { used+=h; }
         if(h>CONTENT_H){ used=0; }   // a single non-list block taller than a page: accepted limitation
-      });
+      }
     }
     place([...editor.children], editor);
     if(saved){ try{ const r=document.createRange(); r.setStart(saved.sc,saved.so); r.setEnd(saved.ec,saved.eo); sel.removeAllRanges(); sel.addRange(r); }catch(_){} }
@@ -1812,10 +1868,11 @@
   }
 
   function composeCurrentFileText(){
-    const md = htmlToMd(editor);
     const name = (docName.textContent.trim()||'Document1');
     const cleanNode = editor.cloneNode(true);
     cleanNode.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    mergeSplitTables(cleanNode);                 // stitch any paginated table fragments back into one
+    const md = htmlToMd(cleanNode);
     return composeFileText(md, cleanNode.innerHTML, name, docMode);
   }
 
