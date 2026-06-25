@@ -20,6 +20,10 @@
 		<data>
 		ar5xmDs9mPpaINVXiVlVqUCB8ao=
 		</data>
+		<key>Resources/helloword.icns</key>
+		<data>
+		Frf28ghEqlD8Qt29IcxrPajBru8=
+		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
@@ -65,6 +69,17 @@
 			<key>hash2</key>
 			<data>
 			NV2dNLwgykV7aWfTBywUILBA9Lidl7F51PrkQw77SbM=
+			</data>
+		</dict>
+		<key>Resources/helloword.icns</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			Frf28ghEqlD8Qt29IcxrPajBru8=
+			</data>
+			<key>hash2</key>
+			<data>
+			EMlBOoLOY3tZkAU6b1StD1WIak4Dor9BaCznk04Z01U=
 			</data>
 		</dict>
 	</dict>

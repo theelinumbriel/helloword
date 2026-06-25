@@ -68,6 +68,20 @@ Gatekeeper, since the bundle isn't code-signed.)
 google-chrome --app="file://$PWD/index.html"   # or: chromium / microsoft-edge
 ```
 
+### Open a file from Finder (macOS)
+
+Build the app bundle once:
+
+```bash
+bash build-helloword-app.sh
+```
+
+Then right-click any `.md`, `.markdown`, or `.txt` file in Finder and choose
+**Open With → HelloWord** to open it in the editor. The file opens read-only in the
+sense that **Save** prompts you with a Save dialog rather than silently overwriting the
+original. (If HelloWord isn't listed, re-run the build script — it re-registers the app
+with Launch Services — or use **Open With → Other…** and pick `HelloWord.app`.)
+
 ### Option 3 — serve it on localhost
 
 Some browsers are slightly happier serving files over `http://` than `file://`.

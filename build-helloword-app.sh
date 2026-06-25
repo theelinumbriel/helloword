@@ -45,6 +45,12 @@ plutil -lint "$PLIST"
 rm -rf "$APP"
 mv "$BUILD" "$APP"
 
+# Re-sign (ad-hoc). osacompile signs the droplet, but our PlistBuddy edits change
+# Info.plist afterward, which invalidates that signature — macOS then refuses to launch
+# the app ("invalid Info.plist (plist or signature have been modified)"). Re-signing
+# reseals the modified Info.plist so the bundle launches.
+codesign --force --sign - "$APP"
+
 # Register with LaunchServices so Finder shows it in "Open With".
 LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
 [ -x "$LSREG" ] && "$LSREG" -f "$APP"
