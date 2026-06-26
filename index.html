@@ -654,6 +654,109 @@
     return breaks;
   }
 
+  // ---- Tall-block splitting across page breaks (so a big table doesn't spill past the sheet) ----
+  // A continuation fragment is marked .hw-cont. mergeSplitTables() stitches the pieces back into
+  // one table (run before each repaginate and before saving) so the document/.md stays whole.
+  function mergeSplitTables(root){
+    root.querySelectorAll('table.hw-cont').forEach(cont=>{
+      let prev=cont.previousElementSibling;
+      while(prev && prev.classList && (prev.classList.contains('hw-pagebreak')||prev.classList.contains('hw-manual-break'))){ const sp=prev; prev=prev.previousElementSibling; sp.remove(); }
+      if(prev && prev.tagName==='TABLE'){
+        let dst=prev.tBodies[0]; if(!dst){ dst=document.createElement('tbody'); prev.appendChild(dst); }
+        const src=cont.tBodies[0];
+        if(src){ while(src.firstChild) dst.appendChild(src.firstChild); }
+        cont.remove();
+      } else { cont.classList.remove('hw-cont'); }
+    });
+  }
+  // Move the trailing rows that don't fit in availPx into a new continuation <table> (repeats the
+  // header). Rows are MOVED (identity preserved, so the caret survives). Returns the continuation
+  // table (not yet inserted), or null if the whole table already fits.
+  function splitTableToFit(table, availPx){
+    const body=table.tBodies[0]; if(!body) return null;
+    const rows=[...body.rows]; if(rows.length<=1) return null;
+    const theadH=table.tHead?table.tHead.offsetHeight:0;
+    let acc=0, k=0;
+    for(; k<rows.length; k++){
+      const rh=rows[k].offsetHeight;
+      if(k>0 && theadH+acc+rh>availPx) break;   // always keep at least one row, so we make progress
+      acc+=rh;
+    }
+    if(k>=rows.length) return null;
+    const cont=document.createElement('table');
+    cont.className=table.className; cont.classList.add('hw-cont');
+    if(table.tHead) cont.appendChild(table.tHead.cloneNode(true));
+    const cbody=document.createElement('tbody');
+    for(let j=k;j<rows.length;j++) cbody.appendChild(rows[j]);
+    cont.appendChild(cbody);
+    return cont;
+  }
+  // Code blocks: stitch continuation <pre> fragments back into one (join the code with newlines).
+  function mergeSplitPres(root){
+    root.querySelectorAll('pre.hw-cont').forEach(cont=>{
+      let prev=cont.previousElementSibling;
+      while(prev && prev.classList && (prev.classList.contains('hw-pagebreak')||prev.classList.contains('hw-manual-break'))){ const sp=prev; prev=prev.previousElementSibling; sp.remove(); }
+      if(prev && prev.tagName==='PRE'){
+        const pc=prev.querySelector('code')||prev, cc=cont.querySelector('code')||cont;
+        pc.textContent=pc.textContent.replace(/\n$/,'')+'\n'+cc.textContent;
+        cont.remove();
+      } else { cont.classList.remove('hw-cont'); }
+    });
+  }
+  // Move the trailing code lines that don't fit in availPx into a continuation <pre><code>.
+  function splitPreToFit(pre, availPx){
+    const codeEl=pre.querySelector('code')||pre;
+    const lines=codeEl.textContent.replace(/\n$/,'').split('\n');
+    if(lines.length<=1) return null;
+    const cs=getComputedStyle(pre);
+    const padV=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+    const bordV=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
+    const marV=(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);
+    const lineH=(pre.scrollHeight-padV)/lines.length;
+    if(!(lineH>0)) return null;
+    let k=Math.floor((availPx-padV-bordV-marV)/lineH);
+    if(k<1) k=1;
+    if(k>=lines.length) return null;
+    codeEl.textContent=lines.slice(0,k).join('\n');
+    const cont=document.createElement('pre');
+    cont.className=pre.className; cont.classList.add('hw-cont');
+    const ccode=document.createElement('code'); ccode.textContent=lines.slice(k).join('\n'); cont.appendChild(ccode);
+    return cont;
+  }
+  // Paragraphs: stitch continuation <p> fragments back into the preceding paragraph.
+  function mergeSplitParas(root){
+    root.querySelectorAll('p.hw-cont').forEach(cont=>{
+      let prev=cont.previousElementSibling;
+      while(prev && prev.classList && (prev.classList.contains('hw-pagebreak')||prev.classList.contains('hw-manual-break'))){ const sp=prev; prev=prev.previousElementSibling; sp.remove(); }
+      if(prev && prev.tagName==='P'){ while(cont.firstChild) prev.appendChild(cont.firstChild); prev.normalize(); cont.remove(); }
+      else cont.classList.remove('hw-cont');
+    });
+  }
+  // Move the tail of a too-tall paragraph (from the last word boundary that fits in availPx) into a
+  // continuation <p>. Uses Range.extractContents so inline formatting splits cleanly. Heights are
+  // measured via client rects, so they are divided by the current zoom factor to get layout px.
+  function splitParaToFit(p, availPx){
+    const total=p.textContent.length;
+    if(total<2 || !p.getClientRects().length) return null;
+    const f=(zoom||100)/100, pTop=p.getBoundingClientRect().top;
+    function locate(off){ const w=document.createTreeWalker(p,NodeFilter.SHOW_TEXT,null); let acc=0,n,last=null; while(n=w.nextNode()){ const len=n.nodeValue.length; last=n; if(acc+len>=off) return {node:n,offset:off-acc}; acc+=len; } return last?{node:last,offset:last.nodeValue.length}:null; }
+    function bottomAt(off){ const loc=locate(off); if(!loc) return 0; const r=document.createRange(); r.setStart(p,0); try{ r.setEnd(loc.node,loc.offset); }catch(_){ return 0; } const rects=r.getClientRects(); return rects.length?(rects[rects.length-1].bottom-pTop)/f:0; }
+    if(bottomAt(total)<=availPx) return null;
+    let lo=1,hi=total,best=1;
+    while(lo<=hi){ const mid=(lo+hi)>>1; if(bottomAt(mid)<=availPx){ best=mid; lo=mid+1; } else hi=mid-1; }
+    const text=p.textContent; let cut=best;
+    while(cut>1 && !/\s/.test(text.charAt(cut-1))) cut--;     // snap back to a word boundary
+    if(cut<=1) cut=best;
+    const loc=locate(cut); if(!loc) return null;
+    const r=document.createRange(); r.setStart(loc.node,loc.offset); r.setEnd(p,p.childNodes.length);
+    const cont=document.createElement('p'); cont.className=p.className; cont.classList.add('hw-cont');
+    cont.appendChild(r.extractContents()); p.normalize();
+    if(!cont.textContent.length){ while(cont.firstChild) p.appendChild(cont.firstChild); return null; }
+    return cont;
+  }
+  // Undo all paginated splits (tables + code blocks + paragraphs) so content is canonical again.
+  function mergeSplits(root){ mergeSplitTables(root); mergeSplitPres(root); mergeSplitParas(root); }
+
   let _paginateTimer=null;
   function schedulePaginate(){ clearTimeout(_paginateTimer); _paginateTimer=setTimeout(repaginate,250); }
 
@@ -661,22 +764,68 @@
     if(viewMode!=='page'){ return; }
     repaginating=true;
     editor.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    mergeSplits(editor);   // undo any previous split so we re-split from canonical content
     const sel=window.getSelection(); let saved=null;
     if(sel&&sel.rangeCount&&editor.contains(sel.anchorNode)){ const r=sel.getRangeAt(0); saved={sc:r.startContainer,so:r.startOffset,ec:r.endContainer,eo:r.endOffset}; }
     let used=0;
     const blockH=el=>{ const cs=getComputedStyle(el); return el.offsetHeight+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0); };
-    const mkSpacer=h=>{ const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false'); sp.style.height=h+'px'; return sp; };
+    const mkSpacer=h=>{ const sp=document.createElement('div'); sp.className='hw-pagebreak'; sp.setAttribute('contenteditable','false'); sp.style.height=Math.max(0,h)+'px'; return sp; };
     // Place items into pages; for a list taller than a page, recurse so it breaks between <li> (never mid-bullet).
     function place(items, container){
-      items.forEach(el=>{
-        if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) return;
-        if(el.classList.contains('hw-manual-break')){ el.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px'; used=0; return; }  // forced break: fill to next page
+      for(let idx=0; idx<items.length; idx++){
+        const el=items[idx];
+        if(el.nodeType!==1 || el.classList.contains('hw-pagebreak')) continue;
+        if(el.classList.contains('hw-manual-break')){ el.style.height=((CONTENT_H-used)+SIDEGAP_EXTRA)+'px'; used=0; continue; }  // forced break: fill to next page
         const h=blockH(el);
-        if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); return; }
+        if((el.tagName==='UL'||el.tagName==='OL') && h>CONTENT_H){ place([...el.children], el); continue; }
+        // A table taller than a full page would spill past the sheet — split it between rows
+        // (header repeats on the continuation), filling the current page first.
+        if(el.tagName==='TABLE' && h>CONTENT_H){
+          const theadH=el.tHead?el.tHead.offsetHeight:0;
+          const firstRowH=(el.tBodies[0]&&el.tBodies[0].rows[0])?el.tBodies[0].rows[0].offsetHeight:0;
+          if(used>0 && (CONTENT_H-used) < theadH+firstRowH){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=0; }
+          const cont=splitTableToFit(el, CONTENT_H-used);
+          if(cont){
+            used+=blockH(el);
+            el.after(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), cont);
+            used=0;
+            items.splice(idx+1,0,cont);   // process the continuation next (it may split again)
+            continue;
+          }
+          // couldn't split (single row taller than a page) — fall through (accepted limitation)
+        }
+        // A code block taller than a full page — split it between lines (header-less continuation).
+        if(el.tagName==='PRE' && h>CONTENT_H){
+          const codeEl=el.querySelector('code')||el;
+          const nLines=codeEl.textContent.replace(/\n$/,'').split('\n').length;
+          const lineH=nLines>0?(el.scrollHeight/nLines):20;
+          if(used>0 && (CONTENT_H-used) < lineH*2){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=0; }
+          const cont=splitPreToFit(el, CONTENT_H-used);
+          if(cont){
+            used+=blockH(el);
+            el.after(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), cont);
+            used=0;
+            items.splice(idx+1,0,cont);
+            continue;
+          }
+        }
+        // A paragraph taller than a full page — split it at a word boundary.
+        if(el.tagName==='P' && h>CONTENT_H){
+          const lh=parseFloat(getComputedStyle(el).lineHeight)||20;
+          if(used>0 && (CONTENT_H-used) < lh*2){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=0; }
+          const cont=splitParaToFit(el, CONTENT_H-used);
+          if(cont){
+            used+=blockH(el);
+            el.after(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), cont);
+            used=0;
+            items.splice(idx+1,0,cont);
+            continue;
+          }
+        }
         if(used>0 && used+h>CONTENT_H){ container.insertBefore(mkSpacer((CONTENT_H-used)+SIDEGAP_EXTRA), el); used=h; }
         else { used+=h; }
         if(h>CONTENT_H){ used=0; }   // a single non-list block taller than a page: accepted limitation
-      });
+      }
     }
     place([...editor.children], editor);
     if(saved){ try{ const r=document.createRange(); r.setStart(saved.sc,saved.so); r.setEnd(saved.ec,saved.eo); sel.removeAllRanges(); sel.addRange(r); }catch(_){} }
@@ -1463,6 +1612,18 @@
     r.readAsText(file);fileInput.value='';
   });
 
+  /* OPEN VIA SERVER — used by Finder "Open With HelloWord" (launch.command adds ?open=<abs path>). */
+  function fileBasename(p){ return String(p||'').split(/[\\/]/).pop(); }
+  function applyOpenedText(text, path){ loadText(text, fileBasename(path)); }
+  async function openFromServer(path){
+    try{
+      const res=await fetch('/__open?path='+encodeURIComponent(path));
+      if(!res.ok){ saveStat.textContent='Could not open file'; return false; }
+      applyOpenedText(await res.text(), path);
+      return true;
+    }catch(_){ saveStat.textContent='Could not open file'; return false; }
+  }
+
   /* ===== IMAGE INSERT (base64 data URI) ===== */
   imgInput.addEventListener('change',e=>{
     const f=e.target.files[0]; if(!f) return;
@@ -1800,10 +1961,11 @@
   }
 
   function composeCurrentFileText(){
-    const md = htmlToMd(editor);
     const name = (docName.textContent.trim()||'Document1');
     const cleanNode = editor.cloneNode(true);
     cleanNode.querySelectorAll('.hw-pagebreak').forEach(s=>s.remove());
+    mergeSplits(cleanNode);                      // stitch any paginated table/code fragments back into one
+    const md = htmlToMd(cleanNode);
     return composeFileText(md, cleanNode.innerHTML, name, docMode);
   }
 
@@ -2124,6 +2286,7 @@
   setViewMode(viewMode);
   restore();ensureBlock();updateActive();editor.focus();
   applyFitWidth();
+  (function(){ try{ var op=new URLSearchParams(location.search).get('open'); if(op) openFromServer(op); }catch(_){} })();
   renderDateCheck();
   window.HW = {
     paginatePlan: paginatePlan,
@@ -2139,6 +2302,9 @@
     setMode: setMode,
     composeCurrentFileText: composeCurrentFileText,
     loadText: loadText,
+    fileBasename: fileBasename,
+    applyOpenedText: applyOpenedText,
+    openFromServer: openFromServer,
     flushAutosave: flushAutosave,
     stampedName: ()=>stampedName(),
     setStampDate: (v)=>{stampDate=!!v;},

@@ -4,14 +4,36 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT=8137
 PROFILE="$HOME/Library/Application Support/helloword"
 mkdir -p "$PROFILE"
-URL="http://localhost:$PORT/index.html"
+BASEURL="http://localhost:$PORT/index.html"
+
+PY="$(command -v python3 || command -v python)"
+
+# Optional first arg = a file to open (used by Finder "Open With HelloWord" via the .app).
+# Resolve to an absolute path and append it as a url-encoded ?open= param so the page can
+# fetch its contents from the server (see serve.py /__open).
+URL="$BASEURL"
+if [ -n "${1:-}" ]; then
+  case "$1" in
+    /*) ABS="$1" ;;
+    *)  ABS="$(cd "$(dirname "$1")" 2>/dev/null && pwd)/$(basename "$1")" ;;
+  esac
+  if [ -n "$PY" ]; then
+    ENC="$("$PY" -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1],safe=""))' "$ABS")"
+    URL="$BASEURL?open=$ENC"
+  fi
+fi
+
+# Test hook: print the URL we would open and exit, without starting the server/browser.
+if [ "${HELLOWORD_DRYRUN:-}" = "1" ]; then
+  echo "$URL"
+  exit 0
+fi
 
 # True only if OUR helloword app is what's served on the port (not just any HTTP 200/404
 # from some other local service that happens to use 8137).
-is_helloword(){ curl -fs "$URL" 2>/dev/null | grep -q "helloword"; }
+is_helloword(){ curl -fs "$BASEURL" 2>/dev/null | grep -q "helloword"; }
 
 if ! is_helloword; then
-  PY="$(command -v python3 || command -v python)"
   if [ -n "$PY" ]; then
     ( cd "$DIR" && PORT="$PORT" HELLOWORD_NOOPEN=1 nohup "$PY" serve.py >/dev/null 2>&1 & )
     for i in $(seq 1 25); do is_helloword && break; sleep 0.2; done
